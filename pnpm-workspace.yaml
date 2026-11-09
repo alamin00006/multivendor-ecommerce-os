@@ -1,0 +1,9 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Metro (React Native) resolves best with a flat node_modules.
+nodeLinker: hoisted
+
+overrides:
+  react-dom: 19.3.1

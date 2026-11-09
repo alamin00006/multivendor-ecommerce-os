@@ -1,0 +1,26 @@
+{
+  "name": "@marketbd/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/library.json": "./tsconfig/library.json",
+    "./tsconfig/nextjs.json": "./tsconfig/nextjs.json",
+    "./tsconfig/react-native.json": "./tsconfig/react-native.json",
+    "./eslint": "./eslint.config.js",
+    "./tokens": "./tokens/tokens.js",
+    "./tailwind-preset": "./tokens/tailwind-preset.cjs",
+    "./theme.css": "./tokens/theme.css"
+  },
+  "scripts": {
+    "build": "node scripts/generate-theme-css.js",
+    "lint": "eslint .",
+    "typecheck": "node -e \"process.exit(0)\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "typescript-eslint": "^8.72.1"
+  }
+}

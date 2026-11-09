@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "MarketBD",
+    "slug": "marketbd",
+    "scheme": "marketbd",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.marketbd.app"
+    },
+    "android": {
+      "package": "com.marketbd.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#08755a"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "backgroundColor": "#08755a"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false,
+      "tsconfigPaths": true
+    }
+  }
+}
