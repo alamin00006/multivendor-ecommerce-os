@@ -3,17 +3,19 @@
 import {
   useAddToCart,
   useAvailableCouponsQuery,
+  useBoughtTogetherQuery,
   useMarketplaceMode,
   useProductsQuery,
+  usePublicSettingsQuery,
   useRelatedProductsQuery,
   useWishlistToggle,
 } from '@marketbd/api-client';
-import { discountPercent, type ProductCard as ProductCardData, type ProductDetail, SHIPPING_FEES, type VariantView } from '@marketbd/shared';
+import { discountPercent, type ProductDetail, type VariantView } from '@marketbd/shared';
 import {
   ArrowDown,
   BadgeCheck,
+  Check,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   Heart,
   RotateCcw,
@@ -27,12 +29,15 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { fill } from '@/i18n';
-import { useI18n, Button, cn, QuantityStepper, Stars } from '@marketbd/ui';
+import { useHydrated, useI18n, Button, cn, QuantityStepper, Stars } from '@marketbd/ui';
 import { DealsFeed } from '@/components/home/home-sections';
-import { Countdown, ProductCard } from './product-card';
+import { Countdown } from './product-card';
+import { rememberViewed } from '@/lib/recently-viewed';
+import { ProductQuestions } from './product-questions';
+import { ProductRow } from './product-row';
 import { ProductReviews } from './product-reviews';
 
 /** Variant matching every selected option, if any. */
@@ -263,6 +268,8 @@ function Vouchers() {
 function ProductInfo({ product, purchase }: { product: ProductDetail; purchase: Purchase }) {
   const { t, money, pick } = useI18n();
   const { showSellerInfo } = useMarketplaceMode(product.seller !== null);
+  const { data: settingsData } = usePublicSettingsQuery();
+  const settings = useHydrated() ? settingsData : undefined;
   const { variant, price, compareAt, stock } = purchase;
   const pct = discountPercent(price, compareAt);
 
@@ -325,13 +332,21 @@ function ProductInfo({ product, purchase }: { product: ProductDetail; purchase: 
       </div>
 
       <div className="rounded-lg border border-ink-100 px-3">
-        <InfoRow
-          icon={<Truck className="size-4" />}
-          title={`Standard Delivery ${money(SHIPPING_FEES.INSIDE_DHAKA)}`}
-          sub={`Inside Dhaka 1–2 days · Outside Dhaka ${money(SHIPPING_FEES.OUTSIDE_DHAKA)}, 3–5 days`}
-        />
-        <InfoRow icon={<RotateCcw className="size-4" />} title="7 Days Returns" sub={t.product.cod} />
-        <InfoRow icon={<ShieldCheck className="size-4" />} title={t.product.warranty} />
+        {settings && (
+          <InfoRow
+            icon={<Truck className="size-4" />}
+            title={`Standard Delivery ${money(settings.shipping.insideDhaka)}`}
+            sub={`Inside Dhaka ${settings.shipping.insideDhakaEta} · Outside Dhaka ${money(settings.shipping.outsideDhaka)}, ${settings.shipping.outsideDhakaEta}`}
+          />
+        )}
+        {settings && (
+          <InfoRow
+            icon={<RotateCcw className="size-4" />}
+            title={settings.returns.days > 0 ? `${settings.returns.days} Days Returns` : 'No returns'}
+            sub={t.product.cod}
+          />
+        )}
+        <InfoRow icon={<ShieldCheck className="size-4" />} title={product.warranty ?? 'No warranty'} />
       </div>
 
       <Vouchers />
@@ -355,6 +370,7 @@ const TABS = [
   { id: 'details', label: 'Product Details' },
   { id: 'specs', label: 'Specifications' },
   { id: 'reviews', label: 'Reviews' },
+  { id: 'questions', label: 'Questions' },
   { id: 'seller', label: 'Seller' },
   { id: 'recommended', label: 'Recommended' },
 ];
@@ -404,35 +420,6 @@ function Collapsible({ children, height = 220 }: { children: ReactNode; height?:
   );
 }
 
-/** Horizontal product row with arrow controls (4 cards visible on desktop). */
-function ProductRow({ title, products }: { title: string; products: ProductCardData[] }) {
-  const row = useRef<HTMLDivElement>(null);
-  if (!products.length) return null;
-  const scroll = (dir: 1 | -1) => row.current?.scrollBy({ left: dir * row.current.clientWidth * 0.8, behavior: 'smooth' });
-  return (
-    <section>
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="font-semibold text-ink-900">{title}</h2>
-        <div className="flex gap-1.5">
-          <button type="button" onClick={() => scroll(-1)} className="rounded-full bg-white p-1.5 shadow-card hover:bg-ink-50" aria-label="Previous">
-            <ChevronLeft className="size-4" />
-          </button>
-          <button type="button" onClick={() => scroll(1)} className="rounded-full bg-white p-1.5 shadow-card hover:bg-ink-50" aria-label="Next">
-            <ChevronRight className="size-4" />
-          </button>
-        </div>
-      </div>
-      <div ref={row} className="scrollbar-none flex gap-3 overflow-x-auto scroll-smooth">
-        {products.map((p) => (
-          <div key={p.id} className="w-40 shrink-0 sm:w-[calc((100%-3*0.75rem)/4)]">
-            <ProductCard product={p} />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 /** Small sticky buy box shown beside the long content on desktop. */
 function StickyBuyBox({ product, purchase }: { product: ProductDetail; purchase: Purchase }) {
   const { t, money, pick } = useI18n();
@@ -475,6 +462,7 @@ export function ProductView({ product }: { product: ProductDetail }) {
   const { showSellerInfo } = useMarketplaceMode(product.seller !== null);
   const purchase = usePurchase(product);
   const { data: related } = useRelatedProductsQuery(product.slug);
+  const { data: boughtTogether } = useBoughtTogetherQuery(product.slug);
   const { data: sellerProducts } = useProductsQuery(
     { seller: product.seller?.slug, limit: 12, sort: 'popular' },
     { skip: !showSellerInfo || !product.seller },
@@ -484,6 +472,7 @@ export function ProductView({ product }: { product: ProductDetail }) {
   const optionKeys = Object.keys(product.options);
   const tabs = TABS.filter((tab) => tab.id !== 'seller' || (showSellerInfo && product.seller));
   const activeTab = useActiveSection(tabs.map((tab) => tab.id));
+  useEffect(() => rememberViewed(product), [product]);
 
   return (
     <div className="space-y-4 pb-20 md:pb-0">
@@ -512,6 +501,18 @@ export function ProductView({ product }: { product: ProductDetail }) {
         <div className="min-w-0 space-y-4">
           <section id="details" className="card scroll-mt-48 p-5">
             <h2 className="mb-3 font-semibold text-ink-900">Product Details</h2>
+            {product.highlights.length > 0 && (
+              <div className="mb-4">
+                <h3 className="mb-2 text-sm font-semibold">Key features</h3>
+                <ul className="space-y-1.5 text-sm text-ink-700">
+                  {product.highlights.map((h) => (
+                    <li key={h} className="flex gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-primary-600" /> {h}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <Collapsible>
               <h3 className="mb-2 font-semibold">{pick(product.title, product.titleBn)}</h3>
               <p className="text-sm leading-relaxed text-ink-700">{lead}</p>
@@ -544,10 +545,22 @@ export function ProductView({ product }: { product: ProductDetail }) {
                   <dd>{product.options[k]!.join(', ')}</dd>
                 </div>
               ))}
+              {product.specifications.map((row) => (
+                <div key={row.label} className="grid grid-cols-[160px_1fr] px-3 py-2">
+                  <dt className="text-ink-500">{row.label}</dt>
+                  <dd className="whitespace-pre-line">{row.value}</dd>
+                </div>
+              ))}
+              <div className="grid grid-cols-[160px_1fr] px-3 py-2">
+                <dt className="text-ink-500">Warranty</dt>
+                <dd>{product.warranty ?? 'No warranty'}</dd>
+              </div>
             </dl>
           </section>
 
           <ProductReviews productId={product.id} />
+
+          <ProductQuestions productId={product.id} />
 
           {showSellerInfo && product.seller && (
             <section id="seller" className="card flex scroll-mt-48 flex-wrap items-center gap-3 p-4">
@@ -575,6 +588,7 @@ export function ProductView({ product }: { product: ProductDetail }) {
           )}
 
           <div id="recommended" className="scroll-mt-48 space-y-5">
+            <ProductRow title="Frequently bought together" products={boughtTogether ?? []} />
             {showSellerInfo && (
               <ProductRow title="More from this Seller" products={(sellerProducts?.items ?? []).filter((p) => p.id !== product.id)} />
             )}

@@ -24,9 +24,10 @@ interface Draft {
   imageUrl: string | null;
   sortOrder: number;
   isActive: boolean;
+  seoContent: string;
 }
 
-const empty = (parentId: string | null = null): Draft => ({ name: '', nameBn: '', slug: '', parentId, iconUrl: null, imageUrl: null, sortOrder: 0, isActive: true });
+const empty = (parentId: string | null = null): Draft => ({ name: '', nameBn: '', slug: '', parentId, iconUrl: null, imageUrl: null, sortOrder: 0, isActive: true, seoContent: '' });
 
 export default function AdminCategoriesPage() {
   const { data: tree, isLoading } = useAdminCategoriesQuery();
@@ -37,11 +38,12 @@ export default function AdminCategoriesPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const edit = (c: CategoryNode) =>
-    setDraft({ id: c.id, name: c.name, nameBn: c.nameBn, slug: c.slug, parentId: c.parentId, iconUrl: c.iconUrl, imageUrl: c.imageUrl, sortOrder: c.sortOrder, isActive: c.isActive });
+    setDraft({ id: c.id, name: c.name, nameBn: c.nameBn, slug: c.slug, parentId: c.parentId, iconUrl: c.iconUrl, imageUrl: c.imageUrl, sortOrder: c.sortOrder, isActive: c.isActive, seoContent: c.seoContent ?? '' });
 
   const save = async () => {
     if (!draft) return;
-    const { id, ...body } = draft;
+    const { id, seoContent, ...rest } = draft;
+    const body = { ...rest, seoContent: seoContent.trim() || null };
     const parsed = CategorySchema.safeParse(body);
     if (!parsed.success) return setErrors(issuesToErrors(parsed.error.issues));
     setErrors({});
@@ -135,6 +137,16 @@ export default function AdminCategoriesPage() {
             <div>
               <span className="label">Cover image</span>
               <ImageField value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} folder="categories" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label">SEO content (Markdown)</label>
+              <textarea
+                className="input h-48 py-2 font-mono text-xs"
+                placeholder="Shown below the product grid on the category page. Use ## headings, lists and links."
+                value={draft.seoContent}
+                onChange={(e) => setDraft({ ...draft, seoContent: e.target.value })}
+              />
+              {errors.seoContent && <p className="field-error">{errors.seoContent}</p>}
             </div>
             <Button className="sm:col-span-2" loading={createState.isLoading || updateState.isLoading} onClick={() => void save()}>Save</Button>
           </div>

@@ -2,7 +2,7 @@
 
 import { useFacetsQuery, useProductFeedQuery } from '@marketbd/api-client';
 import { PRODUCT_SORTS, type ProductCard, type ProductListQuery, type ProductSort } from '@marketbd/shared';
-import { PackageSearch, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, PackageSearch, SlidersHorizontal, X } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { type ReactNode, useMemo, useState } from 'react';
 import { useI18n, Button, cn, EmptyState, ErrorState, Stars } from '@marketbd/ui';
@@ -11,6 +11,8 @@ import { ProductGrid } from './product-card';
 type Fixed = Pick<ProductListQuery, 'category' | 'campaign' | 'seller'>;
 
 const PAGE_SIZE = 20;
+/** Options shown per filter group before "View more". */
+const COLLAPSED = 6;
 
 /** Reads list params from the URL so filters are shareable and survive refresh. */
 function useListParams(fixed: Fixed) {
@@ -30,6 +32,51 @@ function useListParams(fixed: Fixed) {
       sort: sort && (PRODUCT_SORTS as readonly string[]).includes(sort) ? sort : ('relevance' as ProductSort),
     };
   }, [sp, fixed]);
+}
+
+/** One sidebar block: heading + body, separated by a hairline like the reference layout. */
+function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="border-b border-ink-100 py-4 first:pt-0 last:border-0">
+      <h3 className="mb-3 text-[15px] font-semibold capitalize text-ink-900">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+/** Checkbox list that collapses to a few rows with a "View more / View less" toggle. */
+function CheckList({
+  options,
+  selected,
+  onToggle,
+}: {
+  options: Array<{ value: string; label: string; count?: number }>;
+  selected: string[];
+  onToggle: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  // Selected options always stay visible, even when they sit below the fold.
+  const shown = open ? options : options.filter((o, i) => i < COLLAPSED || selected.includes(o.value));
+  return (
+    <div>
+      <ul className="space-y-2.5">
+        {shown.map((o) => (
+          <li key={o.value}>
+            <label className="flex cursor-pointer items-center gap-2.5 text-ink-700 hover:text-primary-700">
+              <input type="checkbox" className="size-4 rounded accent-primary-700" checked={selected.includes(o.value)} onChange={() => onToggle(o.value)} />
+              <span className="flex-1 truncate">{o.label}</span>
+              {o.count !== undefined && <span className="text-xs text-ink-400">({o.count})</span>}
+            </label>
+          </li>
+        ))}
+      </ul>
+      {options.length > COLLAPSED && (
+        <button type="button" onClick={() => setOpen(!open)} className="mt-3 flex items-center gap-1 text-xs font-semibold text-primary-700 hover:underline">
+          {open ? 'View less' : 'View more'} <ChevronDown className={cn('size-3.5 transition', open && 'rotate-180')} />
+        </button>
+      )}
+    </div>
+  );
 }
 
 function FilterPanel({ fixed, onDone }: { fixed: Fixed; onDone?: () => void }) {
@@ -59,27 +106,20 @@ function FilterPanel({ fixed, onDone }: { fixed: Fixed; onDone?: () => void }) {
   const selectedAttrs = (params.attrs ?? '').split(',').filter(Boolean);
 
   return (
-    <div className="space-y-5 text-sm">
+    <div className="text-sm">
       {facets && facets.brands.length > 0 && (
-        <section>
-          <h3 className="mb-2 font-semibold text-ink-900">{t.listing.brand}</h3>
-          <ul className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
-            {facets.brands.map((b) => (
-              <li key={b.slug}>
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input type="checkbox" className="accent-primary-700" checked={selectedBrands.includes(b.slug)} onChange={() => toggleList('brand', b.slug)} />
-                  <span className="flex-1">{b.name}</span>
-                  <span className="text-xs text-ink-400">{b.count}</span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <FilterGroup title="Brands">
+          <CheckList
+            options={facets.brands.map((b) => ({ value: b.slug, label: b.name, count: b.count }))}
+            selected={selectedBrands}
+            onToggle={(v) => toggleList('brand', v)}
+          />
+        </FilterGroup>
       )}
-      <section>
-        <h3 className="mb-2 font-semibold text-ink-900">{t.listing.price}</h3>
+
+      <FilterGroup title={t.listing.price}>
         <form
-          className="flex items-center gap-1.5"
+          className="flex items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
             update((p) => {
@@ -90,70 +130,64 @@ function FilterPanel({ fixed, onDone }: { fixed: Fixed; onDone?: () => void }) {
             });
           }}
         >
-          <input className="input h-8 px-2" inputMode="numeric" placeholder={t.listing.min} value={min} onChange={(e) => setMin(e.target.value.replace(/\D/g, ''))} aria-label={t.listing.min} />
-          <span>–</span>
-          <input className="input h-8 px-2" inputMode="numeric" placeholder={t.listing.max} value={max} onChange={(e) => setMax(e.target.value.replace(/\D/g, ''))} aria-label={t.listing.max} />
-          <Button type="submit" size="sm">
-            {t.common.apply}
+          <input className="input h-9 min-w-0 px-2" inputMode="numeric" placeholder={t.listing.min} value={min} onChange={(e) => setMin(e.target.value.replace(/\D/g, ''))} aria-label={t.listing.min} />
+          <span className="text-ink-400">–</span>
+          <input className="input h-9 min-w-0 px-2" inputMode="numeric" placeholder={t.listing.max} value={max} onChange={(e) => setMax(e.target.value.replace(/\D/g, ''))} aria-label={t.listing.max} />
+          <Button type="submit" size="sm" className="h-9 shrink-0 px-3" aria-label={t.common.apply}>
+            Go
           </Button>
         </form>
         {facets && facets.priceRange.max > 0 && (
-          <p className="mt-1 text-xs text-ink-400">
+          <p className="mt-2 text-xs text-ink-400">
             {money(facets.priceRange.min)} – {money(facets.priceRange.max)}
           </p>
         )}
-      </section>
-      <section>
-        <h3 className="mb-2 font-semibold text-ink-900">{t.listing.rating}</h3>
-        <ul className="space-y-1.5">
-          {[4, 3, 2].map((r) => (
-            <li key={r}>
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="radio"
-                  name="rating"
-                  className="accent-primary-700"
-                  checked={params.rating === r}
-                  onChange={() => update((p) => p.set('rating', String(r)))}
-                />
-                <Stars value={r} /> <span className="text-xs text-ink-500">{t.listing.andUp}</span>
-              </label>
-            </li>
-          ))}
+      </FilterGroup>
+
+      <FilterGroup title={t.listing.rating}>
+        <ul className="space-y-1">
+          {[5, 4, 3, 2, 1].map((r) => {
+            const on = params.rating === r;
+            return (
+              <li key={r}>
+                <button
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => update((p) => (on ? p.delete('rating') : p.set('rating', String(r))))}
+                  className={cn('flex w-full items-center gap-2 rounded px-1.5 py-1 text-left hover:bg-ink-50', on && 'bg-primary-50')}
+                >
+                  <Stars value={r} size={15} />
+                  {r < 5 && <span className={cn('text-xs', on ? 'font-semibold text-primary-700' : 'text-ink-500')}>And Up</span>}
+                </button>
+              </li>
+            );
+          })}
         </ul>
-      </section>
-      <label className="flex cursor-pointer items-center gap-2">
-        <input
-          type="checkbox"
-          className="accent-primary-700"
-          checked={Boolean(params.inStock)}
-          onChange={(e) => update((p) => (e.target.checked ? p.set('inStock', 'true') : p.delete('inStock')))}
-        />
-        {t.listing.inStockOnly}
-      </label>
+      </FilterGroup>
+
+      <FilterGroup title="Availability">
+        <label className="flex cursor-pointer items-center gap-2.5 text-ink-700">
+          <input
+            type="checkbox"
+            className="size-4 accent-primary-700"
+            checked={Boolean(params.inStock)}
+            onChange={(e) => update((p) => (e.target.checked ? p.set('inStock', 'true') : p.delete('inStock')))}
+          />
+          {t.listing.inStockOnly}
+        </label>
+      </FilterGroup>
+
       {facets &&
         Object.entries(facets.attributes)
           .filter(([, values]) => values.length > 1)
           .map(([key, values]) => (
-            <section key={key}>
-              <h3 className="mb-2 font-semibold capitalize text-ink-900">{key}</h3>
-              <div className="flex flex-wrap gap-1.5">
-                {values.slice(0, 20).map((v) => {
-                  const token = `${key}:${v}`;
-                  const on = selectedAttrs.includes(token);
-                  return (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => toggleList('attrs', token)}
-                      className={cn('rounded border px-2 py-1 text-xs', on ? 'border-primary-700 bg-primary-50 text-primary-800' : 'border-ink-200')}
-                    >
-                      {v}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
+            <FilterGroup key={key} title={key}>
+              <CheckList
+                options={values.map((v) => ({ value: `${key}:${v}`, label: v }))}
+                selected={selectedAttrs}
+                onToggle={(v) => toggleList('attrs', v)}
+              />
+            </FilterGroup>
           ))}
     </div>
   );
@@ -162,10 +196,13 @@ function FilterPanel({ fixed, onDone }: { fixed: Fixed; onDone?: () => void }) {
 export function ProductListing({
   fixed = {},
   title,
+  label,
   initial,
 }: {
   fixed?: Fixed;
   title?: ReactNode;
+  /** Shown as "N items found for '<label>'". */
+  label?: string;
   initial?: { items: ProductCard[]; total: number };
 }) {
   const { t, money } = useI18n();
@@ -196,6 +233,7 @@ export function ProductListing({
     setPage(1);
     router.push(`${pathname}?${next.toString()}`, { scroll: false });
   };
+  const clearAll = () => router.push(pathname + (params.q ? `?q=${encodeURIComponent(params.q)}` : ''), { scroll: false });
 
   const chips: Array<{ label: string; remove: () => void }> = [];
   for (const b of (params.brand ?? '').split(',').filter(Boolean)) {
@@ -218,29 +256,48 @@ export function ProductListing({
   if (params.rating) chips.push({ label: `${params.rating}★ ${t.listing.andUp}`, remove: () => setParam('rating', null) });
   if (params.inStock) chips.push({ label: t.listing.inStockOnly, remove: () => setParam('inStock', null) });
 
+  const found = label ?? params.q;
+
   return (
-    <div className="flex gap-5">
-      <aside className="hidden w-60 shrink-0 lg:block">
-        <div className="card sticky top-28 p-4">
-          <h2 className="mb-4 font-semibold">{t.listing.filters}</h2>
+    <div className="flex gap-6">
+      <aside className="hidden w-64 shrink-0 lg:block">
+        <div className="sticky top-32 max-h-[calc(100vh-9rem)] overflow-y-auto rounded-lg bg-white p-4 shadow-card">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-semibold">{t.listing.filters}</h2>
+            {chips.length > 0 && (
+              <button type="button" onClick={clearAll} className="text-xs font-semibold text-accent-600 hover:underline">
+                {t.common.clearAll}
+              </button>
+            )}
+          </div>
           <FilterPanel fixed={fixed} />
         </div>
       </aside>
 
       <div className="min-w-0 flex-1">
-        <div className="card mb-3 flex flex-wrap items-center gap-3 p-3">
+        <div className="mb-4 flex flex-wrap items-end gap-3">
           <div className="min-w-0 flex-1">
             {title}
-            <p className="text-sm text-ink-500">
-              {total.toLocaleString()} {t.listing.results}
+            <p className="mt-0.5 text-sm text-ink-500">
+              <b className="text-ink-800">{total.toLocaleString()}</b> {t.listing.results}
+              {found && (
+                <>
+                  {' '}for <span className="font-semibold text-primary-700">“{found}”</span>
+                </>
+              )}
             </p>
           </div>
-          <button type="button" onClick={() => setDrawer(true)} className="flex items-center gap-1 rounded border border-ink-200 px-3 py-1.5 text-sm lg:hidden">
+          <button type="button" onClick={() => setDrawer(true)} className="flex h-9 items-center gap-1.5 rounded-md border border-ink-200 bg-white px-3 text-sm lg:hidden">
             <SlidersHorizontal className="size-4" /> {t.listing.filters}
+            {chips.length > 0 && <span className="grid size-5 place-items-center rounded-full bg-primary-700 text-[10px] font-bold text-white">{chips.length}</span>}
           </button>
           <label className="flex items-center gap-2 text-sm">
-            <span className="hidden text-ink-500 sm:inline">{t.listing.sortBy}</span>
-            <select className="input h-9 w-auto" value={params.sort} onChange={(e) => setParam('sort', e.target.value === 'relevance' ? null : e.target.value)}>
+            <span className="hidden text-ink-500 sm:inline">Sort By:</span>
+            <select
+              className="input h-9 w-auto min-w-40 bg-white font-medium"
+              value={params.sort}
+              onChange={(e) => setParam('sort', e.target.value === 'relevance' ? null : e.target.value)}
+            >
               {PRODUCT_SORTS.map((s) => (
                 <option key={s} value={s}>
                   {t.listing.sort[s]}
@@ -248,20 +305,21 @@ export function ProductListing({
               ))}
             </select>
           </label>
-          {chips.length > 0 && (
-            <div className="flex w-full flex-wrap items-center gap-2 border-t border-ink-100 pt-3 text-xs">
-              <span className="text-ink-500">{t.listing.filteredBy}:</span>
-              {chips.map((c) => (
-                <button key={c.label} type="button" onClick={c.remove} className="flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-1 text-primary-800">
-                  {c.label} <X className="size-3" />
-                </button>
-              ))}
-              <button type="button" onClick={() => router.push(pathname + (params.q ? `?q=${encodeURIComponent(params.q)}` : ''))} className="font-semibold text-accent-600">
-                {t.common.clearAll}
-              </button>
-            </div>
-          )}
         </div>
+
+        {chips.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-ink-500">{t.listing.filteredBy}:</span>
+            {chips.map((c) => (
+              <button key={c.label} type="button" onClick={c.remove} className="flex items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-2.5 py-1 text-primary-800 hover:bg-primary-100">
+                {c.label} <X className="size-3" />
+              </button>
+            ))}
+            <button type="button" onClick={clearAll} className="font-semibold text-accent-600 hover:underline">
+              {t.common.clearAll}
+            </button>
+          </div>
+        )}
 
         {isError ? (
           <ErrorState message={t.common.error} onRetry={() => void refetch()} />
@@ -270,12 +328,12 @@ export function ProductListing({
             <EmptyState icon={<PackageSearch />} title={t.listing.noResults} text={t.listing.noResultsHint} />
           </div>
         ) : (
-          <ProductGrid products={items} loading={isFetching} skeletons={page === 1 ? 10 : 5} cols="grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5" />
+          <ProductGrid products={items} loading={isFetching} skeletons={page === 1 ? 8 : 4} cols="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4" />
         )}
 
         {hasMore && (
-          <div className="mt-5 text-center">
-            <Button variant="outline" onClick={() => setPage((data?.meta.page ?? 1) + 1)} loading={isFetching} className="min-w-48">
+          <div className="mt-6 text-center">
+            <Button variant="outline" onClick={() => setPage((data?.meta.page ?? 1) + 1)} loading={isFetching} className="min-w-48 bg-white">
               {t.common.loadMore}
             </Button>
           </div>

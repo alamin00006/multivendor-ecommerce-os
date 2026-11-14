@@ -1,42 +1,70 @@
 'use client';
 
-import { useMarketplaceMode } from '@marketbd/api-client';
+import { useMarketplaceMode, usePublicSettingsQuery } from '@marketbd/api-client';
 import { BRAND } from '@marketbd/shared';
 import { Clock, Mail, MapPin, Phone, QrCode } from 'lucide-react';
 import Link from 'next/link';
-import { useI18n } from '@marketbd/ui';
+import { useHydrated, useI18n } from '@marketbd/ui';
 import { Logo } from '@marketbd/ui';
+
+const SOCIAL_BADGES = [
+  { key: 'facebook', label: 'f' },
+  { key: 'instagram', label: 'ig' },
+  { key: 'youtube', label: 'yt' },
+  { key: 'tiktok', label: 'tt' },
+  { key: 'linkedin', label: 'in' },
+] as const;
 
 const PAYMENT_LABELS = ['AMEX', 'Mastercard', 'VISA', 'bKash', 'Nagad', 'Rocket', 'Upay', 'Cash on Delivery'];
 
 export function Footer() {
   const { t } = useI18n();
   const { sellerFeatures } = useMarketplaceMode();
+  const { data: settings } = usePublicSettingsQuery();
+  const store = useHydrated() ? settings?.store : undefined;
+  const phone = store?.phone || BRAND.supportPhone;
+  const email = store?.email || BRAND.supportEmail;
+  const socials = SOCIAL_BADGES.filter((s) => store?.social[s.key]);
   return (
     <footer className="mt-10 border-t border-ink-100 bg-white pb-20 text-ink-600 md:pb-0">
       <div className="container-site grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
         <div className="space-y-2.5 text-sm">
           <Logo />
-          <p className="flex gap-2">
-            <MapPin className="mt-0.5 size-4 shrink-0 text-primary-700" /> House 1, Road 1, Gulshan 1, Dhaka 1212, Bangladesh
-          </p>
-          <p className="flex items-center gap-2">
-            <Phone className="size-4 text-primary-700" /> {BRAND.supportPhone}
-          </p>
-          <p className="flex items-center gap-2">
-            <Clock className="size-4 text-primary-700" /> 9 am – 9 pm (Everyday)
-          </p>
-          <p className="flex items-center gap-2">
-            <Mail className="size-4 text-primary-700" /> {BRAND.supportEmail}
-          </p>
-          <p className="pt-2 font-semibold text-ink-800">{t.footer.followUs}</p>
-          <div className="flex gap-2">
-            {['f', 'in', 'yt', 'ig'].map((s) => (
-              <span key={s} className="grid size-8 place-items-center rounded-full border border-ink-200 text-[11px] font-bold uppercase text-ink-600">
-                {s}
-              </span>
-            ))}
-          </div>
+          {store?.address && (
+            <p className="flex gap-2">
+              <MapPin className="mt-0.5 size-4 shrink-0 text-primary-700" /> {store.address}
+            </p>
+          )}
+          <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} className="flex items-center gap-2 hover:text-primary-700">
+            <Phone className="size-4 text-primary-700" /> {phone}
+          </a>
+          {store?.hours && (
+            <p className="flex items-center gap-2">
+              <Clock className="size-4 text-primary-700" /> {store.hours}
+            </p>
+          )}
+          <a href={`mailto:${email}`} className="flex items-center gap-2 hover:text-primary-700">
+            <Mail className="size-4 text-primary-700" /> {email}
+          </a>
+          {socials.length > 0 && (
+            <>
+              <p className="pt-2 font-semibold text-ink-800">{t.footer.followUs}</p>
+              <div className="flex gap-2">
+                {socials.map((s) => (
+                  <a
+                    key={s.key}
+                    href={store!.social[s.key]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={s.key}
+                    className="grid size-8 place-items-center rounded-full border border-ink-200 text-[11px] font-bold uppercase text-ink-600 hover:border-primary-600 hover:text-primary-700"
+                  >
+                    {s.label}
+                  </a>
+                ))}
+              </div>
+            </>
+          )}
         </div>
         <div>
           <h3 className="mb-3 font-semibold text-ink-900">{t.footer.about}</h3>

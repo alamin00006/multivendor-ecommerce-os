@@ -4,13 +4,14 @@ import {
   useMarketplaceMode,
   useProductQuery,
   useProductReviewsQuery,
+  usePublicSettingsQuery,
   useRelatedProductsQuery,
   useWishlistToggle,
 } from '@marketbd/api-client';
-import { discountPercent, fill, SHIPPING_FEES, type VariantView } from '@marketbd/shared';
+import { discountPercent, fill, type VariantView } from '@marketbd/shared';
 import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { BadgeCheck, Heart, RotateCcw, Store, Truck, Zap } from 'lucide-react-native';
+import { BadgeCheck, Check, Heart, RotateCcw, ShieldCheck, Store, Truck, Zap } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, FlatList, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +29,7 @@ export default function ProductScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { showSellerInfo } = useMarketplaceMode();
+  const { data: settings } = usePublicSettingsQuery();
   const { data: product, isLoading, isError, refetch } = useProductQuery(slug);
   const { data: related } = useRelatedProductsQuery(slug);
   const { data: reviews } = useProductReviewsQuery({ productId: product?.id ?? '', limit: 3 }, { skip: !product });
@@ -127,12 +129,20 @@ export default function ProductScreen() {
             <View className="flex-row items-center gap-2">
               <Truck size={16} color={colors.primary} />
               <Text className="flex-1 text-xs text-ink-700">
-                {t.product.insideDhaka} {money(SHIPPING_FEES.INSIDE_DHAKA)} · {t.product.outsideDhaka} {money(SHIPPING_FEES.OUTSIDE_DHAKA)}
+                {settings
+                  ? `${t.product.insideDhaka} ${money(settings.shipping.insideDhaka)} (${settings.shipping.insideDhakaEta}) · ${t.product.outsideDhaka} ${money(settings.shipping.outsideDhaka)} (${settings.shipping.outsideDhakaEta})`
+                  : '…'}
               </Text>
             </View>
             <View className="flex-row items-center gap-2">
               <RotateCcw size={16} color={colors.primary} />
-              <Text className="text-xs text-ink-700">{t.product.returns} · {t.product.cod}</Text>
+              <Text className="text-xs text-ink-700">
+                {settings && settings.returns.days > 0 ? `${settings.returns.days} days returns` : t.product.returns} · {t.product.cod}
+              </Text>
+            </View>
+            <View className="flex-row items-center gap-2">
+              <ShieldCheck size={16} color={colors.primary} />
+              <Text className="text-xs text-ink-700">{product.warranty ?? 'No warranty'}</Text>
             </View>
           </Card>
 
@@ -155,7 +165,23 @@ export default function ProductScreen() {
 
           <Card className="gap-2">
             <Text className="font-semibold">{t.product.description}</Text>
+            {product.highlights.map((h) => (
+              <View key={h} className="flex-row gap-2">
+                <Check size={14} color={colors.primary} />
+                <Text className="flex-1 text-sm text-ink-700">{h}</Text>
+              </View>
+            ))}
             <Text className="text-sm leading-5 text-ink-700">{pick(product.description, product.descriptionBn)}</Text>
+            {product.specifications.length > 0 && (
+              <View className="mt-2 rounded-lg border border-ink-100">
+                {product.specifications.map((row, i) => (
+                  <View key={row.label} className={`flex-row px-3 py-2 ${i > 0 ? 'border-t border-ink-100' : ''}`}>
+                    <Text className="w-28 text-xs text-ink-500">{row.label}</Text>
+                    <Text className="flex-1 text-xs text-ink-800">{row.value}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </Card>
 
           <Card className="gap-3">
