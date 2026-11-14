@@ -15,3 +15,4 @@ export * from './manage/product-picker';
 export * from './manage/edit-product-page';
 export * from './manage/form-utils';
 export * from './manage/questions-manager';
+export * from './hydrated';

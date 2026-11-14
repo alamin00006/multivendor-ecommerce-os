@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
+import { CategorySeo } from '@/components/category/category-seo';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { ProductListing } from '@/components/product/product-listing';
 import { getDictionary } from '@/i18n/server';
@@ -53,10 +54,12 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       <Suspense>
         <ProductListing
           fixed={{ category: slug }}
-          title={<h1 className="font-display text-lg font-semibold">{name(category)}</h1>}
+          title={<h1 className="font-display text-xl font-semibold text-ink-900">{name(category)}</h1>}
+          label={name(category)}
           initial={initial ? { items: initial.items, total: initial.meta.total } : undefined}
         />
       </Suspense>
+      {category.seoContent && <CategorySeo content={category.seoContent} />}
     </div>
   );
 }

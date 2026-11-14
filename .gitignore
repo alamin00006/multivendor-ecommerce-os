@@ -5,9 +5,8 @@ dist/
 .expo/
 coverage/
 *.tsbuildinfo
-.env
-.env.local
 apps/api/src/generated/
 apps/mobile/ios/
 apps/mobile/android/
 .DS_Store
+config.bat

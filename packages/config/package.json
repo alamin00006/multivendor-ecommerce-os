@@ -14,7 +14,7 @@
     "./theme.css": "./tokens/theme.css"
   },
   "scripts": {
-    "build": "node scripts/generate-theme-css.js",
+    "build": "node init && node scripts/generate-theme-css.js",
     "lint": "eslint .",
     "typecheck": "node -e \"process.exit(0)\""
   },

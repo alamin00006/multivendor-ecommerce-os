@@ -90,6 +90,14 @@ The admin turns the mode on or off at **Admin → Settings**. The change needs n
   - Orders split into one `SubOrder` per seller.
   - Each sub-order stores the seller's `commissionRate` at order time.
 
+## Store settings and product content
+
+- **Admin → Settings** also holds the delivery fees and delivery times (inside/outside Dhaka), the return window and policy, and the store contact info and social links. Checkout, product pages, the returns rule and the footer read these at runtime. The API caches them for 30 seconds.
+- **Products** have key features, a specifications table and a warranty. Sellers and admins edit these in the product form.
+- **Categories** have optional Markdown SEO content, edited in **Admin → Categories**. It is rendered below the product grid; raw HTML is not rendered.
+- **Product Q&A:** signed-in customers ask questions on the product page. The seller answers in **Seller Center → Questions** (the admin answers for the house store or in single-vendor mode). The asker gets a notification. Admins can hide questions in **Admin → Questions**.
+- **Frequently bought together** is computed from orders that were not cancelled (`GET /products/:slug/bought-together`).
+
 ## How things fit together
 
 - **Validation:** request bodies and queries are validated with the Zod schemas in `@marketbd/shared`. The web and mobile forms use the same schemas through `react-hook-form` + `zodResolver` or `Schema.safeParse`.
@@ -139,6 +147,6 @@ The e2e suite drops and recreates the `marketbd_test` database on every run. It 
 
 ## Libraries added beyond the core stack
 
-argon2 (password hashing), helmet, cookie-parser, @nestjs/throttler (rate limiting), @nestjs/swagger, @aws-sdk/client-s3, sharp (image processing), react-hook-form + @hookform/resolvers, lucide-react / lucide-react-native (icons), embla-carousel (hero slider), sonner (toasts), expo-image, expo-secure-store, expo-web-browser, @react-native-async-storage/async-storage.
+argon2 (password hashing), helmet, cookie-parser, @nestjs/throttler (rate limiting), @nestjs/swagger, @aws-sdk/client-s3, sharp (image processing), react-hook-form + @hookform/resolvers, lucide-react / lucide-react-native (icons), embla-carousel (hero slider), sonner (toasts), react-markdown (category SEO content), expo-image, expo-secure-store, expo-web-browser, @react-native-async-storage/async-storage.
 
 The upstream MinIO image is no longer published on Docker Hub. `docker-compose.yml` therefore uses `pgsty/minio`, a maintained community build of the same server.
