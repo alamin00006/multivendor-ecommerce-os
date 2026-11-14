@@ -4,26 +4,26 @@ import { UpdatePlatformSettingsSchema } from '@marketbd/shared';
 import { createZodDto } from 'nestjs-zod';
 import type { AuthUserContext } from '../../common/auth-user.js';
 import { CurrentUser, Public, ResponseMessage, Roles } from '../../common/decorators.js';
-import { PlatformModeService } from './platform-mode.service.js';
+import { SettingsService } from './settings.service.js';
 
 class UpdatePlatformSettingsDto extends createZodDto(UpdatePlatformSettingsSchema) {}
 
 @ApiTags('settings')
 @Controller()
 export class PlatformController {
-  constructor(private readonly mode: PlatformModeService) {}
+  constructor(private readonly settings: SettingsService) {}
 
   @Public()
   @Get('settings/public')
   getPublic() {
-    return this.mode.getPublicSettings();
+    return this.settings.publicSettings();
   }
 
   @ApiBearerAuth()
   @Roles('ADMIN')
   @Get('admin/settings')
   getAdmin() {
-    return this.mode.getPublicSettings();
+    return this.settings.publicSettings();
   }
 
   @ApiBearerAuth()
@@ -31,6 +31,6 @@ export class PlatformController {
   @Patch('admin/settings')
   @ResponseMessage('Settings updated')
   update(@Body() dto: UpdatePlatformSettingsDto, @CurrentUser() user: AuthUserContext) {
-    return this.mode.setMultiVendor(dto.multiVendorEnabled, user.id);
+    return this.settings.update(dto, user.id);
   }
 }

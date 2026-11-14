@@ -5,11 +5,7 @@ import { canTransitionOrder, type OrderStatus } from '@marketbd/shared';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { AddressBlock, OrderItemRow, OrderTimeline } from '@/components/account/order-parts';
-import { PageHeader } from '@/components/manage/panel';
-import { useI18n } from '@/i18n/client';
-import { Button, ErrorState, Skeleton } from '@/components/ui';
-import { OrderStatusBadge, PaymentStatusBadge } from '@/components/ui/status';
+import { AddressBlock, OrderItemRow, OrderTimeline, PageHeader, useI18n, Button, ErrorState, Skeleton, OrderStatusBadge, PaymentStatusBadge } from '@marketbd/ui';
 
 const SELLER_TARGETS: OrderStatus[] = ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
 

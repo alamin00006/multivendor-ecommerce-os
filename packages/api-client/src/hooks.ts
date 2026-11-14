@@ -142,18 +142,24 @@ export const useWishlistToggle = (productId: string) => {
 /** Live countdown to an ISO date; returns zeros once reached. */
 export const useCountdown = (endsAt: string | null | undefined) => {
   const target = endsAt ? new Date(endsAt).getTime() : 0;
-  const [now, setNow] = useState(() => Date.now());
+  // Starts after mount so server-rendered HTML and the first client render match (no hydration error).
+  const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     if (!target) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
+    const tick = () => setNow(Date.now());
+    const first = setTimeout(tick, 0);
+    const id = setInterval(tick, 1000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+    };
   }, [target]);
-  const diff = Math.max(0, target - now);
+  const diff = now === null ? 0 : Math.max(0, target - now);
   return {
     days: Math.floor(diff / 86_400_000),
     hours: Math.floor((diff / 3_600_000) % 24),
     minutes: Math.floor((diff / 60_000) % 60),
     seconds: Math.floor((diff / 1000) % 60),
-    done: diff === 0,
+    done: now !== null && diff === 0,
   };
 };

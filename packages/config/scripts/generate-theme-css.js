@@ -14,6 +14,7 @@ for (const [name, value] of Object.entries(tokens.radius)) lines.push(`  --radiu
 for (const [name, value] of Object.entries(tokens.fontFamily)) lines.push(`  --font-${name}: ${value.join(', ')};`);
 for (const [name, value] of Object.entries(tokens.shadow)) lines.push(`  --shadow-${name}: ${value};`);
 lines.push(`  --container-site: ${tokens.layout.container};`);
+lines.push(`  --container-header: ${tokens.layout.header};`);
 lines.push('}', '');
 
 writeFileSync(join(outDir, 'theme.css'), lines.join('\n'));

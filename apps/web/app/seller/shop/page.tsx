@@ -5,9 +5,7 @@ import { type SellerProfileView, UpdateShopSchema } from '@marketbd/shared';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { ImageField } from '@/components/manage/image-upload';
-import { PageHeader } from '@/components/manage/panel';
-import { Badge, Button, Skeleton } from '@/components/ui';
+import { ImageField, PageHeader, Badge, Button, Skeleton } from '@marketbd/ui';
 
 export default function ShopSettingsPage() {
   const { data: shop, isLoading } = useMySellerProfileQuery();

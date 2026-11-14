@@ -3,10 +3,7 @@
 import { useSellerDashboardQuery } from '@marketbd/api-client';
 import { AlertTriangle, Clock, Package, Wallet } from 'lucide-react';
 import Link from 'next/link';
-import { fmtDate, PageHeader, StatCard, Table } from '@/components/manage/panel';
-import { useI18n } from '@/i18n/client';
-import { ErrorState, Skeleton } from '@/components/ui';
-import { OrderStatusBadge } from '@/components/ui/status';
+import { fmtDate, PageHeader, StatCard, Table, useI18n, ErrorState, Skeleton, OrderStatusBadge } from '@marketbd/ui';
 
 export default function SellerDashboardPage() {
   const { money } = useI18n();

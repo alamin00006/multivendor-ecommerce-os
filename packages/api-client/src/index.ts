@@ -8,3 +8,4 @@ export * from './endpoints/auth.js';
 export * from './endpoints/catalog.js';
 export * from './endpoints/account.js';
 export * from './endpoints/management.js';
+export * from './endpoints/questions.js';

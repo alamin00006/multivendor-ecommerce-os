@@ -4,7 +4,7 @@ import { useCartCount } from '@marketbd/api-client';
 import { Home, LayoutGrid, ShoppingCart, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useI18n } from '@/i18n/client';
+import { useI18n } from '@marketbd/ui';
 
 /** Mobile bottom tab bar (Home, Categories, Cart, Account). */
 export function BottomNav() {

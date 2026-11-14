@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { ProductCard, ProductDetail, ProductFacets, ProductListParams, SearchSuggestion } from '@marketbd/shared';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { PaginatedResult } from '../../common/pagination.js';
-import { num } from '../../common/utils.js';
+import { asSpecifications, num } from '../../common/utils.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { toBrandView } from '../brands/brands.module.js';
 import { CategoriesService, toCategoryRef } from '../categories/categories.service.js';
@@ -141,6 +141,9 @@ export class ProductsService {
       ...card,
       description: product.description,
       descriptionBn: product.descriptionBn,
+      highlights: product.highlights,
+      specifications: asSpecifications(product.specifications),
+      warranty: product.warranty,
       status: product.status,
       category: toCategoryRef(product.category),
       breadcrumbs,
@@ -151,6 +154,26 @@ export class ProductsService {
       createdAt: product.createdAt.toISOString(),
       ratingAvg: num(product.ratingAvg),
     };
+  }
+
+  /**
+   * Products most often bought in the same order as this one (order co-occurrence),
+   * limited to products that are visible on the storefront right now.
+   */
+  async boughtTogether(slug: string, limit = 8): Promise<ProductCard[]> {
+    const product = await this.prisma.product.findUnique({ where: { slug }, select: { id: true } });
+    if (!product) throw new NotFoundException('Product not found');
+    const rows = await this.prisma.$queryRaw<Array<{ productId: string }>>`
+      SELECT other."productId"
+      FROM "OrderItem" mine
+      JOIN "OrderItem" other ON other."orderId" = mine."orderId" AND other."productId" <> mine."productId"
+      JOIN "Order" o ON o.id = mine."orderId" AND o.status NOT IN ('CANCELLED')
+      WHERE mine."productId" = ${product.id}
+      GROUP BY other."productId"
+      ORDER BY COUNT(DISTINCT other."orderId") DESC, MAX(o."createdAt") DESC
+      LIMIT ${limit * 2}`;
+    const cards = await this.cardsByIds(rows.map((r) => r.productId));
+    return cards.slice(0, limit);
   }
 
   async related(slug: string, limit = 12): Promise<ProductCard[]> {

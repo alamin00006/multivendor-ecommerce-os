@@ -64,6 +64,21 @@ export interface OtpRequestResult {
 
 export interface PublicSettings {
   multiVendorEnabled: boolean;
+  shipping: {
+    /** Fees in poisha. */
+    insideDhaka: number;
+    outsideDhaka: number;
+    insideDhakaEta: string;
+    outsideDhakaEta: string;
+  };
+  returns: { days: number; policy: string };
+  store: {
+    address: string;
+    phone: string;
+    email: string;
+    hours: string;
+    social: Partial<Record<'facebook' | 'instagram' | 'youtube' | 'tiktok' | 'linkedin', string>>;
+  };
 }
 
 // ───────── Geo & addresses ─────────
@@ -106,6 +121,8 @@ export interface CategoryNode {
   sortOrder: number;
   isActive: boolean;
   productCount?: number;
+  /** Only included for a single category (category page, admin). */
+  seoContent?: string | null;
   children: CategoryNode[];
 }
 
@@ -157,6 +174,9 @@ export interface ProductCard {
   /** Null when multi-vendor mode is off. */
   seller: SellerSummary | null;
   flash: FlashPrice | null;
+  /** Variant shown on the card — used by the card's "Add to cart" when the product has one variant. */
+  defaultVariant: { id: string; sku: string; stock: number; attributes: Record<string, string> } | null;
+  variantCount: number;
 }
 
 export interface VariantView {
@@ -188,6 +208,9 @@ export interface ProductDetail extends ProductCard {
   variants: VariantView[];
   /** Variant option dimensions, e.g. { color: ['Black','Blue'], size: ['M','L'] }. */
   options: Record<string, string[]>;
+  highlights: string[];
+  specifications: Array<{ label: string; value: string }>;
+  warranty: string | null;
   createdAt: IsoDate;
 }
 
@@ -198,6 +221,9 @@ export interface ManagedProduct {
   titleBn: string | null;
   description: string;
   descriptionBn: string | null;
+  highlights: string[];
+  specifications: Array<{ label: string; value: string }>;
+  warranty: string | null;
   status: ProductStatus;
   categoryId: string;
   brandId: string | null;
@@ -570,5 +596,20 @@ export interface AdminUserView {
   role: Role;
   isActive: boolean;
   ordersCount: number;
+  createdAt: IsoDate;
+}
+
+// ───────── Product Q&A ─────────
+
+export interface QuestionView {
+  id: string;
+  question: string;
+  answer: string | null;
+  askedBy: { name: string };
+  /** Who answered — the seller's shop name, or the store name when staff answered. */
+  answeredBy: { name: string; role: 'seller' | 'store' } | null;
+  answeredAt: IsoDate | null;
+  isVisible: boolean;
+  product?: { id: string; slug: string; title: string; imageUrl: string | null };
   createdAt: IsoDate;
 }

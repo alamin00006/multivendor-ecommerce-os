@@ -133,10 +133,24 @@ enum AddressLabel {
 // ───────── Platform ─────────
 
 model PlatformSetting {
-  id                 Int      @id @default(1)
-  multiVendorEnabled Boolean  @default(true)
-  updatedById        String?
-  updatedAt          DateTime @updatedAt
+  id                   Int      @id @default(1)
+  multiVendorEnabled   Boolean  @default(true)
+  // Delivery (fees in poisha) — used by checkout and shown on product pages
+  shippingInsideDhaka  Int      @default(6000)
+  shippingOutsideDhaka Int      @default(12000)
+  deliveryInsideDhaka  String   @default("1–2 days")
+  deliveryOutsideDhaka String   @default("3–5 days")
+  // Returns
+  returnDays           Int      @default(7)
+  returnPolicy         String   @default("Unused items in original packaging can be returned within the return window.")
+  // Store contact info (footer, help pages)
+  storeAddress         String   @default("House 1, Road 1, Gulshan 1, Dhaka 1212, Bangladesh")
+  supportPhone         String   @default("+8809600000000")
+  supportEmail         String   @default("support@marketbd.example")
+  supportHours         String   @default("9 am – 9 pm (Everyday)")
+  socialLinks          Json     @default("{}")
+  updatedById          String?
+  updatedAt            DateTime @updatedAt
 }
 
 // ───────── Users & auth ─────────
@@ -163,6 +177,8 @@ model User {
   wishlist          Wishlist[]
   orders            Order[]
   reviews           Review[]
+  questions         ProductQuestion[]  @relation("QuestionAsker")
+  answers           ProductQuestion[]  @relation("QuestionAnswerer")
   notifications     Notification[]
   couponRedemptions CouponRedemption[]
 
@@ -284,20 +300,22 @@ model SellerProfile {
 // ───────── Catalog ─────────
 
 model Category {
-  id        String     @id @default(cuid())
-  parentId  String?
-  name      String
-  nameBn    String
-  slug      String     @unique
-  iconUrl   String?
-  imageUrl  String?
-  sortOrder Int        @default(0)
-  isActive  Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
-  children  Category[] @relation("CategoryTree")
-  products  Product[]
+  id         String     @id @default(cuid())
+  parentId   String?
+  name       String
+  nameBn     String
+  slug       String     @unique
+  iconUrl    String?
+  imageUrl   String?
+  sortOrder  Int        @default(0)
+  isActive   Boolean    @default(true)
+  /// Markdown shown below the product grid on the category page (buying guide, FAQ…)
+  seoContent String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  parent     Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children   Category[] @relation("CategoryTree")
+  products   Product[]
 
   @@index([parentId, sortOrder])
 }
@@ -314,32 +332,38 @@ model Brand {
 }
 
 model Product {
-  id            String                   @id @default(cuid())
-  sellerId      String
-  categoryId    String
-  brandId       String?
-  title         String
-  titleBn       String?
-  slug          String                   @unique
-  description   String
-  descriptionBn String?
-  status        ProductStatus            @default(DRAFT)
-  minPrice      Int                      @default(0)
-  ratingAvg     Decimal                  @default(0) @db.Decimal(2, 1)
-  ratingCount   Int                      @default(0)
-  soldCount     Int                      @default(0)
-  searchVector  Unsupported("tsvector")?
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
-  seller        SellerProfile            @relation(fields: [sellerId], references: [id])
-  category      Category                 @relation(fields: [categoryId], references: [id])
-  brand         Brand?                   @relation(fields: [brandId], references: [id])
-  variants      ProductVariant[]
-  images        ProductImage[]
-  reviews       Review[]
-  wishlistedBy  Wishlist[]
-  campaigns     CampaignProduct[]
-  orderItems    OrderItem[]
+  id             String                   @id @default(cuid())
+  sellerId       String
+  categoryId     String
+  brandId        String?
+  title          String
+  titleBn        String?
+  slug           String                   @unique
+  description    String
+  descriptionBn  String?
+  status         ProductStatus            @default(DRAFT)
+  minPrice       Int                      @default(0)
+  ratingAvg      Decimal                  @default(0) @db.Decimal(2, 1)
+  ratingCount    Int                      @default(0)
+  soldCount      Int                      @default(0)
+  searchVector   Unsupported("tsvector")?
+  /// Key features shown as bullets on the product page
+  highlights     String[]                 @default([])
+  /// [{ "label": "Battery", "value": "5000 mAh" }, …]
+  specifications Json                     @default("[]")
+  warranty       String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  seller         SellerProfile            @relation(fields: [sellerId], references: [id])
+  category       Category                 @relation(fields: [categoryId], references: [id])
+  brand          Brand?                   @relation(fields: [brandId], references: [id])
+  variants       ProductVariant[]
+  images         ProductImage[]
+  reviews        Review[]
+  questions      ProductQuestion[]
+  wishlistedBy   Wishlist[]
+  campaigns      CampaignProduct[]
+  orderItems     OrderItem[]
 
   @@index([sellerId, status])
   @@index([categoryId, status, minPrice])
@@ -735,4 +759,25 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt, createdAt])
+}
+
+// ───────── Product Q&A ─────────
+
+model ProductQuestion {
+  id           String    @id @default(cuid())
+  productId    String
+  userId       String
+  question     String
+  answer       String?
+  answeredById String?
+  answeredAt   DateTime?
+  isVisible    Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user         User      @relation("QuestionAsker", fields: [userId], references: [id], onDelete: Cascade)
+  answeredBy   User?     @relation("QuestionAnswerer", fields: [answeredById], references: [id], onDelete: SetNull)
+
+  @@index([productId, isVisible, createdAt])
+  @@index([answeredAt])
 }

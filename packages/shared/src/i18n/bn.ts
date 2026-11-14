@@ -52,6 +52,9 @@ export const bn: Dictionary = {
     backHome: 'হোমে ফিরুন',
   },
   home: {
+    dontMiss: 'মিস করবেন না',
+    upToOff: '{n}% পর্যন্ত ছাড়',
+    dealsCantMiss: 'মিস করবেন না এমন অফার',
     flashSale: 'ফ্ল্যাশ সেল',
     endsIn: 'শেষ হবে',
     recommendedCategories: 'আপনার জন্য ক্যাটাগরি',
@@ -224,6 +227,9 @@ export const bn: Dictionary = {
     PARTIALLY_REFUNDED: 'আংশিক রিফান্ড',
   },
   footer: {
+    followUs: 'আমাদের অনুসরণ করুন',
+    installApp: 'অ্যাপ ইনস্টল করুন',
+    appOffer: 'এক্সক্লুসিভ ছাড়ের জন্য',
     about: 'আমাদের সম্পর্কে',
     aboutUs: 'আমাদের কথা',
     careers: 'ক্যারিয়ার',

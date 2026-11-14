@@ -47,6 +47,11 @@ export class ProductsController {
     return this.products.bySlug(slug);
   }
 
+  @Get('products/:slug/bought-together')
+  boughtTogether(@Param('slug') slug: string) {
+    return this.products.boughtTogether(slug);
+  }
+
   @Get('products/:slug/related')
   related(@Param('slug') slug: string) {
     return this.products.related(slug);

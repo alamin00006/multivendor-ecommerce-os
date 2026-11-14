@@ -2,9 +2,8 @@
 
 import { useWishlistQuery } from '@marketbd/api-client';
 import { Heart } from 'lucide-react';
-import { useI18n } from '@/i18n/client';
+import { useI18n, ButtonLink, EmptyState } from '@marketbd/ui';
 import { ProductGrid } from '@/components/product/product-card';
-import { ButtonLink, EmptyState } from '@/components/ui';
 
 export default function WishlistPage() {
   const { t } = useI18n();

@@ -37,7 +37,7 @@ export const shadow = {
   raised: '0 6px 16px rgba(18,21,28,0.12)',
 };
 
-export const layout = { container: '1200px', headerHeight: '64px' };
+export const layout = { container: '1320px', header: '1880px', headerHeight: '64px' };
 
 export const tokens = { colors, radius, fontFamily, shadow, layout };
 export default tokens;

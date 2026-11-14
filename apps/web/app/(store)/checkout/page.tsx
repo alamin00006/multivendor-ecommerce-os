@@ -14,9 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { AddressForm } from '@/components/forms/address-form';
-import { RequireAuth } from '@/components/auth/require-auth';
-import { useI18n } from '@/i18n/client';
-import { Badge, Button, cn, ErrorState, Modal, Skeleton } from '@/components/ui';
+import { RequireAuth, useI18n, Badge, Button, cn, ErrorState, Modal, Skeleton } from '@marketbd/ui';
 
 const METHOD_ICON: Record<PaymentMethod, typeof Banknote> = { COD: Banknote, BKASH: Smartphone, SSLCOMMERZ: CreditCard };
 

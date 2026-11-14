@@ -1,6 +1,15 @@
 import { bn } from './bn.js';
 import { type Dictionary, en } from './en.js';
 
+/**
+ * Bangla UI is turned off: the apps run in English only and hide the language switch.
+ * Set to true to bring back the বাংলা toggle (all Bangla strings are kept below).
+ */
+export const BANGLA_ENABLED = false;
+
+/** Cookie the web apps use to remember the UI language. */
+export const LOCALE_COOKIE = 'mbd_locale';
+
 /** UI strings shared by the web and mobile apps (English + Bangla). */
 export type UiLocale = 'en' | 'bn';
 export const dictionaries: Record<UiLocale, Dictionary> = { en, bn };

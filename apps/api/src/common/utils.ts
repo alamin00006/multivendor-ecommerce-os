@@ -34,6 +34,16 @@ export const variantLabel = (attributes: unknown): string => {
   return values.length ? values.join(' / ') : 'Default';
 };
 
+/** JSON column → [{ label, value }], dropping malformed entries. */
+export const asSpecifications = (value: unknown): Array<{ label: string; value: string }> =>
+  Array.isArray(value)
+    ? value.flatMap((item) =>
+        item && typeof item === 'object' && typeof item.label === 'string' && typeof item.value === 'string'
+          ? [{ label: item.label as string, value: item.value as string }]
+          : [],
+      )
+    : [];
+
 export const asAttributes = (value: unknown): Record<string, string> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return Object.fromEntries(

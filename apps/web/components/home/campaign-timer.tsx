@@ -1,7 +1,7 @@
 'use client';
 
 import { useCountdown } from '@marketbd/api-client';
-import { useI18n } from '@/i18n/client';
+import { useI18n } from '@marketbd/ui';
 
 export function CampaignTimer({ endsAt }: { endsAt: string }) {
   const { t } = useI18n();

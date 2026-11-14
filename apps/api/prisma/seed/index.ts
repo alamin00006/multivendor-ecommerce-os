@@ -4,6 +4,7 @@ import argon2 from 'argon2';
 import { AREAS, DISTRICTS, DIVISIONS, toPoisha } from '@marketbd/shared';
 import { PrismaClient, type Prisma } from '../../src/generated/prisma/client.js';
 import { BRANDS, CATEGORIES, type ProductTemplate, type SellerKey } from './catalog-data.js';
+import { seedContent } from './content.js';
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 
@@ -354,6 +355,15 @@ async function seedReviews(productIds: string[], customerIds: string[]) {
       data: { ratingAvg: Math.round((agg._avg.rating ?? 0) * 10) / 10, ratingCount: agg._count },
     });
   }
+  // Seller rating = average of visible reviews across the seller's products.
+  const sellers = await prisma.sellerProfile.findMany({ select: { id: true } });
+  for (const seller of sellers) {
+    const agg = await prisma.review.aggregate({ where: { isVisible: true, product: { sellerId: seller.id } }, _avg: { rating: true } });
+    await prisma.sellerProfile.update({
+      where: { id: seller.id },
+      data: { ratingAvg: Math.round((agg._avg.rating ?? 0) * 10) / 10 },
+    });
+  }
   console.log(`✓ ${count} reviews`);
 }
 
@@ -589,6 +599,7 @@ async function main() {
   const sellers = await seedSellers();
   const customers = await seedCustomers();
   await seedCatalog(sellers, house.id, customers);
+  await seedContent(prisma);
 }
 
 main()

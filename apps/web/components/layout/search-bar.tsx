@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { useI18n } from '@/i18n/client';
+import { useI18n } from '@marketbd/ui';
 
 function useDebounced<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
@@ -55,7 +55,11 @@ export function SearchBar({ className = '' }: { className?: string }) {
 
   return (
     <div ref={box} className={`relative ${className}`}>
-      <form onSubmit={submit} role="search" className="flex h-10 overflow-hidden rounded-md border-2 border-primary-700 bg-white">
+      <form
+        onSubmit={submit}
+        role="search"
+        className="flex h-10 items-center overflow-hidden rounded-lg border border-ink-200 bg-ink-50 pr-1 focus-within:border-primary-600 focus-within:bg-white"
+      >
         <input
           value={q}
           onChange={(e) => {
@@ -71,11 +75,15 @@ export function SearchBar({ className = '' }: { className?: string }) {
           }}
           placeholder={t.common.searchPlaceholder}
           aria-label={t.common.search}
-          className="min-w-0 flex-1 px-3 text-sm outline-none"
+          className="min-w-0 flex-1 bg-transparent px-3 text-sm outline-none"
           autoComplete="off"
         />
-        <button type="submit" className="flex w-12 items-center justify-center bg-primary-700 text-white" aria-label={t.common.search}>
-          <Search className="size-5" />
+        <button
+          type="submit"
+          className="flex size-8 items-center justify-center rounded-md bg-primary-50 text-primary-700 hover:bg-primary-700 hover:text-white"
+          aria-label={t.common.search}
+        >
+          <Search className="size-4" />
         </button>
       </form>
       {showPanel ? (

@@ -13,6 +13,8 @@ export const CategorySchema = z.object({
   imageUrl: UrlSchema.nullable().optional(),
   sortOrder: z.coerce.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
+  /** Markdown buying guide / FAQ shown under the category's product grid. */
+  seoContent: z.string().max(30_000).nullable().optional(),
 });
 export type CategoryInput = z.input<typeof CategorySchema>;
 export type CategoryPayload = z.infer<typeof CategorySchema>;
@@ -58,6 +60,12 @@ export const VariantSchema = z
 export type VariantInput = z.input<typeof VariantSchema>;
 export type VariantPayload = z.infer<typeof VariantSchema>;
 
+export const SpecificationSchema = z.object({
+  label: z.string().trim().min(1).max(60),
+  value: z.string().trim().min(1).max(300),
+});
+export type Specification = z.infer<typeof SpecificationSchema>;
+
 export const ProductImageInputSchema = z.object({
   url: UrlSchema,
   alt: z.string().trim().max(160).optional(),
@@ -72,6 +80,10 @@ export const ProductSchema = z.object({
   categoryId: z.string().min(1, 'Select a category'),
   brandId: z.string().min(1).nullable().optional(),
   status: z.enum(['DRAFT', 'ACTIVE', 'INACTIVE']).default('ACTIVE'),
+  /** Key features shown as bullets. */
+  highlights: z.array(z.string().trim().min(2).max(200)).max(20).default([]),
+  specifications: z.array(SpecificationSchema).max(60).default([]),
+  warranty: z.string().trim().max(120).nullable().optional(),
   images: z.array(ProductImageInputSchema).min(1, 'Add at least one image').max(10),
   variants: z
     .array(VariantSchema)

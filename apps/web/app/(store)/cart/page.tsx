@@ -19,8 +19,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
-import { useI18n } from '@/i18n/client';
-import { Badge, Button, ButtonLink, cn, EmptyState, Price, QuantityStepper, Skeleton } from '@/components/ui';
+import { useI18n, Badge, Button, ButtonLink, cn, EmptyState, Price, QuantityStepper, Skeleton } from '@marketbd/ui';
 
 interface Line {
   key: string;

@@ -5,8 +5,7 @@ import { PRODUCT_SORTS, type ProductCard, type ProductListQuery, type ProductSor
 import { PackageSearch, SlidersHorizontal, X } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { type ReactNode, useMemo, useState } from 'react';
-import { useI18n } from '@/i18n/client';
-import { Button, cn, EmptyState, ErrorState, Stars } from '@/components/ui';
+import { useI18n, Button, cn, EmptyState, ErrorState, Stars } from '@marketbd/ui';
 import { ProductGrid } from './product-card';
 
 type Fixed = Pick<ProductListQuery, 'category' | 'campaign' | 'seller'>;

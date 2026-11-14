@@ -23,6 +23,7 @@ import { OrderStatusModule } from './modules/order-status/order-status.module.js
 import { PaymentsModule } from './modules/payments/payments.module.js';
 import { PlatformModule } from './modules/platform/platform.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
+import { QuestionsModule } from './modules/questions/questions.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
 import { SellersModule } from './modules/sellers/sellers.module.js';
 import { UploadsModule } from './modules/uploads/uploads.module.js';
@@ -60,6 +61,7 @@ class HealthController {
     PaymentsModule,
     OrdersModule,
     ReviewsModule,
+    QuestionsModule,
     CampaignsModule,
     MerchandisingModule,
     UploadsModule,

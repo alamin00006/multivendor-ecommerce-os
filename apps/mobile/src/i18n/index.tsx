@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { type Dictionary, dictionaries, formatBDT, isUiLocale, type UiLocale } from '@marketbd/shared';
+import { BANGLA_ENABLED, type Dictionary, dictionaries, formatBDT, isUiLocale, type UiLocale } from '@marketbd/shared';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 const KEY = 'mbd_locale';
@@ -23,7 +23,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void AsyncStorage.getItem(KEY).then((v) => {
-      if (isUiLocale(v)) {
+      if (BANGLA_ENABLED && isUiLocale(v)) {
         currentLocale = v;
         setLocaleState(v);
       }

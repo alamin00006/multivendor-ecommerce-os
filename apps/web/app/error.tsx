@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useI18n } from '@/i18n/client';
-import { Button, ButtonLink } from '@/components/ui';
+import { useI18n, Button, ButtonLink } from '@marketbd/ui';
 
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const { t } = useI18n();

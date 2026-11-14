@@ -17,6 +17,7 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { OrderStatusService, statusLabel } from '../order-status/order-status.service.js';
 import { PaymentsService } from '../payments/payments.service.js';
 import { PlatformModeService } from '../platform/platform-mode.service.js';
+import { SettingsService } from '../platform/settings.service.js';
 import { SellerAccessService } from '../sellers/seller-access.service.js';
 import {
   canReturnOrder,
@@ -37,6 +38,7 @@ export class OrdersService {
     private readonly status: OrderStatusService,
     private readonly payments: PaymentsService,
     private readonly mode: PlatformModeService,
+    private readonly settings: SettingsService,
     private readonly access: SellerAccessService,
     private readonly notifications: NotificationsService,
   ) {}
@@ -60,7 +62,8 @@ export class OrdersService {
   private async detail(where: Prisma.OrderWhereInput, withCustomer = false): Promise<OrderDetail> {
     const order = await this.prisma.order.findFirst({ where, include: orderDetailInclude });
     if (!order) throw new NotFoundException('Order not found');
-    return toOrderDetail(order, await this.mode.isMultiVendor(), withCustomer);
+    const [multiVendor, returnDays] = await Promise.all([this.mode.isMultiVendor(), this.settings.returnDays()]);
+    return toOrderDetail(order, multiVendor, returnDays, withCustomer);
   }
 
   // ───── Customer ─────
@@ -100,7 +103,9 @@ export class OrdersService {
   async requestReturn(userId: string, id: string, input: ReturnRequestPayload): Promise<OrderDetail> {
     const order = await this.prisma.order.findFirst({ where: { id, userId }, include: orderDetailInclude });
     if (!order) throw new NotFoundException('Order not found');
-    if (!canReturnOrder(order)) throw new BadRequestException('This order is not eligible for return');
+    if (!canReturnOrder(order, await this.settings.returnDays())) {
+      throw new BadRequestException('This order is not eligible for return');
+    }
     const targets = order.subOrders.filter(
       (s) => s.status === 'DELIVERED' && (!input.subOrderId || s.id === input.subOrderId),
     );

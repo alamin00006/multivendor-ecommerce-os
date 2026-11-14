@@ -5,9 +5,7 @@ import { Bell, Heart, LogOut, MapPin, Package, Store, User } from 'lucide-react'
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSelector } from 'react-redux';
-import { RequireAuth } from '@/components/auth/require-auth';
-import { useI18n } from '@/i18n/client';
-import { cn } from '@/components/ui';
+import { RequireAuth, useI18n, cn } from '@marketbd/ui';
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();

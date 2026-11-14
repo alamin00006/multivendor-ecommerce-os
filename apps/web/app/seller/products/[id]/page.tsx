@@ -1,6 +1,6 @@
 'use client';
 
-import { EditProductPage } from '@/components/manage/edit-product-page';
+import { EditProductPage } from '@marketbd/ui';
 
 export default function Page() {
   return <EditProductPage scope="seller" />;

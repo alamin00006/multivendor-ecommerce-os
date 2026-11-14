@@ -4,7 +4,8 @@ import type { Category } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { PlatformModeService } from '../platform/platform-mode.service.js';
 
-const toNode = (c: Category, productCount?: number): CategoryNode => ({
+/** withContent: include the (possibly long) SEO markdown — only for single-category and admin views. */
+const toNode = (c: Category, productCount?: number, withContent = false): CategoryNode => ({
   id: c.id,
   parentId: c.parentId,
   name: c.name,
@@ -15,6 +16,7 @@ const toNode = (c: Category, productCount?: number): CategoryNode => ({
   sortOrder: c.sortOrder,
   isActive: c.isActive,
   productCount,
+  ...(withContent ? { seoContent: c.seoContent } : {}),
   children: [],
 });
 
@@ -68,13 +70,13 @@ export class CategoriesService {
   /** Admin tree including inactive categories. */
   async adminTree(): Promise<CategoryNode[]> {
     const categories = await this.prisma.category.findMany();
-    return buildTree(categories.map((c) => toNode(c)));
+    return buildTree(categories.map((c) => toNode(c, undefined, true)));
   }
 
   async bySlug(slug: string): Promise<CategoryNode & { breadcrumbs: CategoryRef[] }> {
     const category = await this.prisma.category.findUnique({ where: { slug }, include: { children: true } });
     if (!category || !category.isActive) throw new NotFoundException('Category not found');
-    const node = toNode(category);
+    const node = toNode(category, undefined, true);
     node.children = category.children
       .filter((c) => c.isActive)
       .sort((a, b) => a.sortOrder - b.sortOrder)

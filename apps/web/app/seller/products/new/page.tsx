@@ -1,7 +1,6 @@
 'use client';
 
-import { PageHeader } from '@/components/manage/panel';
-import { ProductForm } from '@/components/manage/product-form';
+import { PageHeader, ProductForm } from '@marketbd/ui';
 
 export default function NewSellerProductPage() {
   return (

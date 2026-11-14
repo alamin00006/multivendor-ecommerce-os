@@ -15,7 +15,15 @@ const product = (variants: Array<{ id: string; price: number; compareAtPrice: nu
     ratingCount: 10,
     soldCount: 50,
     images: [{ url: 'https://img/1.jpg' }],
-    seller: { id: 's1', shopName: 'Shop', slug: 'shop', logoUrl: null, ratingAvg: decimal(4), isHouseStore: false, status: 'APPROVED' },
+    seller: {
+      id: 's1',
+      shopName: 'Shop',
+      slug: 'shop',
+      logoUrl: null,
+      ratingAvg: decimal(4),
+      isHouseStore: false,
+      status: 'APPROVED',
+    },
     variants: variants.map((v) => ({ ...v, attributes: {}, isActive: true })),
   }) as unknown as ProductForCard;
 
@@ -35,7 +43,13 @@ describe('toProductCard', () => {
   });
 
   it('applies an active flash price and hides the seller in single-vendor mode', () => {
-    const flash: FlashPrice = { flashSaleId: 'f', specialPrice: 100_000, stockLimit: 10, soldCount: 2, endsAt: '2099-01-01T00:00:00Z' };
+    const flash: FlashPrice = {
+      flashSaleId: 'f',
+      specialPrice: 100_000,
+      stockLimit: 10,
+      soldCount: 2,
+      endsAt: '2099-01-01T00:00:00Z',
+    };
     const card = toProductCard(
       product([{ id: 'a', price: 150_000, compareAtPrice: null, stock: 5 }]),
       new Map([['a', flash]]),

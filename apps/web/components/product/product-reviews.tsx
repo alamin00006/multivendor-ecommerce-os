@@ -1,21 +1,21 @@
 'use client';
 
 import { useProductReviewsQuery, useReviewSummaryQuery } from '@marketbd/api-client';
-import { BadgeCheck, MessageSquare } from 'lucide-react';
+import { BadgeCheck, ChevronDown, MessageSquare } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
-import { useI18n } from '@/i18n/client';
-import { Button, cn, EmptyState, Skeleton, Stars } from '@/components/ui';
+import { useI18n, cn, EmptyState, Skeleton, Stars } from '@marketbd/ui';
 
 export function ProductReviews({ productId }: { productId: string }) {
   const { t, locale } = useI18n();
   const [rating, setRating] = useState<number | undefined>();
-  const [page, setPage] = useState(1);
+  // Starts with a short list and grows with "See more", like the reference layout.
+  const [limit, setLimit] = useState(3);
   const { data: summary } = useReviewSummaryQuery(productId);
-  const { data, isFetching } = useProductReviewsQuery({ productId, page, limit: 5, rating });
+  const { data, isFetching } = useProductReviewsQuery({ productId, page: 1, limit, rating });
 
   return (
-    <section id="reviews" className="card scroll-mt-40 p-4">
+    <section id="reviews" className="card scroll-mt-48 p-4">
       <h2 className="mb-4 font-semibold">{t.product.ratingsReviews}</h2>
       {summary && summary.count > 0 ? (
         <div className="mb-5 grid gap-6 border-b border-ink-100 pb-5 sm:grid-cols-[180px_1fr]">
@@ -37,7 +37,7 @@ export function ProductReviews({ productId }: { productId: string }) {
                   key={r}
                   type="button"
                   onClick={() => {
-                    setPage(1);
+                    setLimit(3);
                     setRating(rating === Number(r) ? undefined : Number(r));
                   }}
                   className={cn('flex w-full items-center gap-2 text-sm', rating === Number(r) && 'font-semibold text-primary-700')}
@@ -90,17 +90,16 @@ export function ProductReviews({ productId }: { productId: string }) {
         <EmptyState icon={<MessageSquare />} title={t.product.noReviews} />
       )}
 
-      {data && data.meta.totalPages > 1 && (
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <Button size="sm" variant="ghost" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-            ‹
-          </Button>
-          <span className="text-sm">
-            {page} / {data.meta.totalPages}
-          </span>
-          <Button size="sm" variant="ghost" disabled={page >= data.meta.totalPages} onClick={() => setPage(page + 1)}>
-            ›
-          </Button>
+      {data && data.meta.total > data.items.length && (
+        <div className="mt-2 text-center">
+          <button
+            type="button"
+            disabled={isFetching}
+            onClick={() => setLimit((l) => Math.min(l + 5, 100))}
+            className="inline-flex items-center gap-1 rounded-full bg-ink-100 px-4 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-200 disabled:opacity-50"
+          >
+            {isFetching ? t.common.loading : 'See more'} <ChevronDown className="size-3.5" />
+          </button>
         </div>
       )}
     </section>

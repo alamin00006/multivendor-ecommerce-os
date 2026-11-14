@@ -14,10 +14,7 @@ import { Star, Store } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { AddressBlock, OrderItemRow, OrderTimeline } from '@/components/account/order-parts';
-import { useI18n } from '@/i18n/client';
-import { Badge, Button, cn, ErrorState, Modal, Skeleton } from '@/components/ui';
-import { OrderStatusBadge, PaymentStatusBadge } from '@/components/ui/status';
+import { AddressBlock, OrderItemRow, OrderTimeline, useI18n, Badge, Button, cn, ErrorState, Modal, Skeleton, OrderStatusBadge, PaymentStatusBadge } from '@marketbd/ui';
 
 function ReviewModal({ item, onClose }: { item: OrderItemView; onClose: () => void }) {
   const { t } = useI18n();

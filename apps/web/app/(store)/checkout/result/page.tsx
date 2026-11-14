@@ -3,8 +3,7 @@
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
-import { useI18n } from '@/i18n/client';
-import { ButtonLink } from '@/components/ui';
+import { useI18n, ButtonLink } from '@marketbd/ui';
 
 function Result() {
   const { t } = useI18n();

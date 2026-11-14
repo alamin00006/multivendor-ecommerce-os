@@ -4,13 +4,13 @@ import { useProductFeedQuery } from '@marketbd/api-client';
 import type { BannerView, CategoryNode, FlashSaleView, LinkTargetType, QuickLinkView } from '@marketbd/shared';
 import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
-import { ChevronLeft, ChevronRight, Smartphone, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useI18n } from '@/i18n/client';
+import { useEffect, useRef, useState } from 'react';
+import { fill } from '@/i18n';
+import { useI18n, SectionHeader } from '@marketbd/ui';
 import { Countdown, ProductGrid } from '@/components/product/product-card';
-import { SectionHeader } from '@/components/ui';
 
 /** Maps admin link targets to storefront URLs. */
 export const linkHref = (type: LinkTargetType, value: string): string => {
@@ -59,18 +59,18 @@ export function HeroSlider({ banners }: { banners: BannerView[] }) {
       <button
         type="button"
         onClick={() => embla?.scrollPrev()}
-        className="absolute left-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/80 p-2 shadow md:block"
+        className="absolute bottom-3 right-14 hidden rounded-full bg-white/80 p-1.5 shadow md:block"
         aria-label="Previous slide"
       >
-        <ChevronLeft className="size-5" />
+        <ChevronLeft className="size-4" />
       </button>
       <button
         type="button"
         onClick={() => embla?.scrollNext()}
-        className="absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/80 p-2 shadow md:block"
+        className="absolute bottom-3 right-4 hidden rounded-full bg-white/80 p-1.5 shadow md:block"
         aria-label="Next slide"
       >
-        <ChevronRight className="size-5" />
+        <ChevronRight className="size-4" />
       </button>
       <div className="absolute inset-x-0 bottom-2 flex justify-center gap-1.5">
         {banners.map((b, i) => (
@@ -87,100 +87,135 @@ export function HeroSlider({ banners }: { banners: BannerView[] }) {
   );
 }
 
+/** Quick-link chips: white pill cards with icon + label, one row (scrolls on mobile). */
 export function QuickLinks({ links }: { links: QuickLinkView[] }) {
   const { pick } = useI18n();
   if (links.length === 0) return null;
   return (
-    <div className="scrollbar-none -mx-3 flex gap-3 overflow-x-auto px-3 md:mx-0 md:grid md:grid-cols-8 md:px-0">
-      {links.map((l) => (
-        <Link key={l.id} href={linkHref(l.linkType, l.linkValue)} className="flex w-16 shrink-0 flex-col items-center gap-1.5 md:w-auto">
-          <span className="relative size-14 overflow-hidden rounded-2xl bg-white shadow-card md:size-16">
-            <Image src={l.iconUrl} alt="" fill sizes="64px" className="object-cover" />
+    <div className="scrollbar-none -mx-3 flex gap-2.5 overflow-x-auto px-3 md:mx-0 md:grid md:grid-cols-6 md:gap-3 md:px-0">
+      {links.slice(0, 6).map((l) => (
+        <Link
+          key={l.id}
+          href={linkHref(l.linkType, l.linkValue)}
+          className="flex h-14 shrink-0 items-center gap-2.5 rounded-lg bg-white px-3 shadow-card transition hover:shadow-raised md:h-16 md:justify-center"
+        >
+          <span className="relative size-8 shrink-0 overflow-hidden rounded-md">
+            <Image src={l.iconUrl} alt="" fill sizes="32px" className="object-cover" />
           </span>
-          <span className="line-clamp-2 text-center text-xs text-ink-700">{pick(l.label, l.labelBn)}</span>
+          <span className="whitespace-nowrap text-sm font-medium text-ink-800">{pick(l.label, l.labelBn)}</span>
         </Link>
       ))}
     </div>
   );
 }
 
+/** One full-width campaign banner under the quick links. */
 export function MidBanners({ banners }: { banners: BannerView[] }) {
-  if (banners.length === 0) return null;
+  const banner = banners[0];
+  if (!banner) return null;
   return (
-    <div className="grid gap-3 md:grid-cols-2">
-      {banners.map((b) => (
-        <Link key={b.id} href={linkHref(b.linkType, b.linkValue)} className="relative aspect-[4/1] overflow-hidden rounded-lg">
-          <Image src={b.imageUrl} alt={b.title} fill sizes="(max-width: 768px) 100vw, 600px" className="object-cover" />
-        </Link>
-      ))}
-    </div>
+    <Link href={linkHref(banner.linkType, banner.linkValue)} className="relative block aspect-[3/1] overflow-hidden rounded-lg md:aspect-[5/1]">
+      <Image src={banner.imageUrl} alt={banner.title} fill sizes="(max-width: 1200px) 100vw, 1200px" className="object-cover" />
+    </Link>
   );
 }
 
+/** Full-width tinted band: flash-sale intro box on the left, deals scrolling on the right. */
 export function FlashSaleSection({ sale }: { sale: FlashSaleView | null }) {
   const { t, money, pick } = useI18n();
   if (!sale || sale.items.length === 0) return null;
+  const maxOff = Math.max(...sale.items.map((i) => Math.round(((i.regularPrice - i.specialPrice) / i.regularPrice) * 100)));
   return (
-    <section className="card p-3 md:p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <h2 className="flex items-center gap-1.5 font-display text-lg font-bold text-flash md:text-xl">
-            <Zap className="size-5 fill-flash" /> {t.home.flashSale}
-          </h2>
-          <span className="hidden text-sm text-ink-500 sm:inline">{t.home.endsIn}</span>
-          <Countdown endsAt={sale.endAt} />
+    <section className="bg-gradient-to-b from-primary-50 to-primary-100/60 py-4">
+      <div className="container-site flex gap-3">
+        <div className="flex w-36 shrink-0 flex-col items-center justify-between gap-2 rounded-lg bg-white p-3 text-center shadow-card md:w-48 md:p-4">
+          <div>
+            <p className="font-display text-2xl font-extrabold italic leading-none text-flash md:text-3xl">
+              <Zap className="mb-1 inline size-6 fill-warning text-warning" />
+              {t.home.flashSale}
+            </p>
+            <span className="mt-2 inline-block rounded-full border border-primary-200 bg-primary-50 px-2 py-0.5 text-[10px] font-bold uppercase text-primary-800">
+              {fill(t.home.upToOff, { n: maxOff })}
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-xs text-ink-600">{t.home.dontMiss}</p>
+            <Countdown endsAt={sale.endAt} compact />
+          </div>
+          <Link
+            href="/flash-sale"
+            className="flex w-full items-center justify-center gap-1 rounded-md bg-primary-700 py-1.5 text-xs font-semibold text-white hover:bg-primary-800"
+          >
+            {t.common.seeAll} <ChevronRight className="size-3.5" />
+          </Link>
         </div>
-        <Link href="/flash-sale" className="rounded border border-flash px-3 py-1 text-sm font-semibold text-flash hover:bg-red-50">
-          {t.common.seeAll}
-        </Link>
-      </div>
-      <div className="scrollbar-none -mx-3 flex gap-2.5 overflow-x-auto px-3 md:mx-0 md:grid md:grid-cols-6 md:px-0">
-        {sale.items.slice(0, 12).map((item) => {
-          const pct = Math.min(100, Math.round((item.soldCount / item.stockLimit) * 100));
-          const left = item.stockLimit - item.soldCount;
-          const off = Math.round(((item.regularPrice - item.specialPrice) / item.regularPrice) * 100);
-          return (
-            <Link
-              key={item.id}
-              href={`/p/${item.product.slug}`}
-              className="group w-36 shrink-0 overflow-hidden rounded-lg border border-ink-100 bg-white md:w-auto"
-            >
-              <div className="relative aspect-square bg-ink-50">
-                {item.product.imageUrl && (
-                  <Image src={item.product.imageUrl} alt={item.product.title} fill sizes="200px" className="object-cover transition group-hover:scale-105" />
-                )}
-                <span className="absolute left-0 top-2 rounded-r bg-flash px-1.5 py-0.5 text-xs font-bold text-white">-{off}%</span>
-              </div>
-              <div className="space-y-1 p-2">
-                <p className="line-clamp-1 text-xs text-ink-700">{pick(item.product.title, item.product.titleBn)}</p>
-                <p className="font-bold text-flash">{money(item.specialPrice)}</p>
-                <p className="text-[11px] text-ink-400 line-through">{money(item.regularPrice)}</p>
-                <div className="relative h-4 overflow-hidden rounded-full bg-red-100">
-                  <div className="absolute inset-y-0 left-0 rounded-full bg-flash" style={{ width: `${pct}%` }} />
-                  <span className="relative block text-center text-[10px] font-semibold leading-4 text-ink-900">
-                    {left <= 5 ? t.common.limitedStock : `${item.soldCount} ${t.common.sold}`}
-                  </span>
+        <div className="scrollbar-none flex min-w-0 flex-1 gap-2.5 overflow-x-auto">
+          {sale.items.map((item) => {
+            const pct = Math.min(100, Math.round((item.soldCount / item.stockLimit) * 100));
+            const left = item.stockLimit - item.soldCount;
+            const off = Math.round(((item.regularPrice - item.specialPrice) / item.regularPrice) * 100);
+            return (
+              <Link
+                key={item.id}
+                href={`/p/${item.product.slug}`}
+                className="group w-36 shrink-0 overflow-hidden rounded-lg bg-white md:w-[calc((100%-4*0.625rem)/5)]"
+              >
+                <div className="relative aspect-square bg-ink-50">
+                  {item.product.imageUrl && (
+                    <Image src={item.product.imageUrl} alt={item.product.title} fill sizes="200px" className="object-cover transition group-hover:scale-105" />
+                  )}
+                  <span className="absolute left-2 top-2 rounded bg-flash px-1.5 py-0.5 text-[11px] font-bold text-white">-{off}%</span>
                 </div>
-              </div>
-            </Link>
-          );
-        })}
+                <div className="space-y-0.5 p-2">
+                  <p className="line-clamp-1 text-xs text-ink-700">{pick(item.product.title, item.product.titleBn)}</p>
+                  <p className="flex items-baseline gap-1.5">
+                    <span className="font-bold text-accent-600">{money(item.specialPrice)}</span>
+                    <span className="text-[11px] text-ink-400 line-through">{money(item.regularPrice)}</span>
+                  </p>
+                  <div className="h-1 overflow-hidden rounded-full bg-ink-100">
+                    <div className="h-full rounded-full bg-flash" style={{ width: `${pct}%` }} />
+                  </div>
+                  <p className={`text-[10px] ${left <= 5 ? 'font-semibold text-flash' : 'text-ink-500'}`}>
+                    {left <= 5 ? t.common.limitedStock : `${item.soldCount} ${t.common.sold}`}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
 }
 
+/** Recommended categories: one scrollable row of large image tiles with arrow controls. */
 export function CategoryGrid({ categories }: { categories: CategoryNode[] }) {
   const { t, pick } = useI18n();
+  const row = useRef<HTMLDivElement>(null);
   if (categories.length === 0) return null;
+  const scroll = (dir: 1 | -1) => row.current?.scrollBy({ left: dir * row.current.clientWidth * 0.8, behavior: 'smooth' });
   return (
     <section>
-      <SectionHeader title={t.home.recommendedCategories} href="/categories" />
-      <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-7">
+      <SectionHeader
+        title={t.home.recommendedCategories}
+        action={
+          <div className="hidden gap-1.5 md:flex">
+            <button type="button" onClick={() => scroll(-1)} className="rounded-full bg-white p-1.5 shadow-card hover:bg-ink-50" aria-label="Previous">
+              <ChevronLeft className="size-4" />
+            </button>
+            <button type="button" onClick={() => scroll(1)} className="rounded-full bg-white p-1.5 shadow-card hover:bg-ink-50" aria-label="Next">
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+        }
+      />
+      <div ref={row} className="scrollbar-none -mx-3 flex gap-3 overflow-x-auto scroll-smooth px-3 md:mx-0 md:px-0">
         {categories.map((c) => (
-          <Link key={c.id} href={`/c/${c.slug}`} className="flex flex-col items-center gap-2 rounded-lg bg-white p-2 shadow-card transition hover:shadow-raised md:p-3">
-            <span className="relative aspect-square w-full overflow-hidden rounded-md bg-ink-50">
-              {c.imageUrl && <Image src={c.imageUrl} alt="" fill sizes="(max-width: 768px) 25vw, 140px" className="object-cover" />}
+          <Link key={c.id} href={`/c/${c.slug}`} className="group flex w-24 shrink-0 flex-col items-center gap-2 md:w-[calc((100%-7*0.75rem)/8)]">
+            <span className="relative aspect-square w-full overflow-hidden rounded-xl bg-white">
+              {c.imageUrl && (
+                <Image src={c.imageUrl} alt="" fill sizes="(max-width: 768px) 96px, 150px" className="object-cover transition group-hover:scale-105" />
+              )}
             </span>
             <span className="line-clamp-2 text-center text-[11px] leading-tight text-ink-700 md:text-xs">{pick(c.name, c.nameBn)}</span>
           </Link>
@@ -190,55 +225,34 @@ export function CategoryGrid({ categories }: { categories: CategoryNode[] }) {
   );
 }
 
-/** "Deals for you" infinite feed (IntersectionObserver + RTK Query merge). */
+/** Deals grid (6 columns on desktop) with a Load More button. */
 export function DealsFeed() {
   const { t } = useI18n();
   const [page, setPage] = useState(1);
   const { data, isFetching, isError, refetch } = useProductFeedQuery({ page, limit: 24, sort: 'popular' });
-  const sentinel = useRef<HTMLDivElement>(null);
-  const hasMore = data ? data.meta.page < data.meta.totalPages : true;
-
-  const loadMore = useCallback(() => {
-    if (!isFetching && hasMore && data) setPage(data.meta.page + 1);
-  }, [isFetching, hasMore, data]);
-
-  useEffect(() => {
-    const el = sentinel.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => entries[0]?.isIntersecting && loadMore(), { rootMargin: '600px' });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [loadMore]);
+  const hasMore = data ? data.meta.page < data.meta.totalPages : false;
 
   return (
     <section>
-      <SectionHeader title={t.home.dealsForYou} />
+      <SectionHeader title={t.home.dealsCantMiss} />
       <ProductGrid products={data?.items ?? []} loading={isFetching} skeletons={data ? 6 : 12} />
-      <div ref={sentinel} className="py-6 text-center text-sm text-ink-500">
+      <div className="py-6 text-center text-sm text-ink-500">
         {isError ? (
           <button type="button" onClick={() => void refetch()} className="font-semibold text-primary-700">
             {t.common.retry}
           </button>
-        ) : !hasMore ? (
+        ) : hasMore ? (
+          <button
+            type="button"
+            disabled={isFetching}
+            onClick={() => data && setPage(data.meta.page + 1)}
+            className="rounded-full border border-ink-300 bg-white px-8 py-2.5 text-sm font-semibold text-ink-800 hover:border-primary-700 hover:text-primary-700 disabled:opacity-50"
+          >
+            {isFetching ? t.common.loading : t.common.loadMore}
+          </button>
+        ) : data ? (
           t.common.nothingMore
         ) : null}
-      </div>
-    </section>
-  );
-}
-
-export function AppDownloadBlock() {
-  const { t } = useI18n();
-  return (
-    <section className="flex flex-col items-center gap-4 overflow-hidden rounded-xl bg-gradient-to-r from-primary-800 to-primary-600 p-6 text-white md:flex-row md:p-8">
-      <Smartphone className="size-14 shrink-0 text-primary-100" />
-      <div className="flex-1 text-center md:text-left">
-        <h2 className="font-display text-xl font-bold">{t.home.appTitle}</h2>
-        <p className="mt-1 text-sm text-primary-100">{t.home.appText}</p>
-      </div>
-      <div className="flex gap-2">
-        <span className="rounded-md bg-black px-4 py-2 text-xs font-semibold">App Store</span>
-        <span className="rounded-md bg-black px-4 py-2 text-xs font-semibold">Google Play</span>
       </div>
     </section>
   );

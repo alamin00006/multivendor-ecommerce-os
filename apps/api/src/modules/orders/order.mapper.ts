@@ -3,7 +3,6 @@ import {
   type OrderDetail,
   type OrderItemView,
   type OrderSummary,
-  RETURN_WINDOW_DAYS,
   type SellerOrderView,
   type ShippingAddressSnapshot,
   type StatusEvent,
@@ -100,14 +99,20 @@ export const deliveredAt = (o: OrderDetailRow): Date | null => {
   return new Date(Math.max(...events.map((e) => e.createdAt.getTime())));
 };
 
-export const canReturnOrder = (o: OrderDetailRow, now = new Date()): boolean => {
+/** returnDays comes from Admin → Settings (PlatformSetting.returnDays). */
+export const canReturnOrder = (o: OrderDetailRow, returnDays: number, now = new Date()): boolean => {
   if (!o.subOrders.some((s) => s.status === 'DELIVERED')) return false;
   if (o.returns.some((r) => r.status === 'REQUESTED' || r.status === 'APPROVED')) return false;
   const at = deliveredAt(o);
-  return Boolean(at && now.getTime() - at.getTime() <= RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  return Boolean(at && now.getTime() - at.getTime() <= returnDays * 24 * 60 * 60 * 1000);
 };
 
-export const toOrderDetail = (o: OrderDetailRow, multiVendor: boolean, withCustomer = false): OrderDetail => ({
+export const toOrderDetail = (
+  o: OrderDetailRow,
+  multiVendor: boolean,
+  returnDays: number,
+  withCustomer = false,
+): OrderDetail => ({
   ...toOrderSummary(o, withCustomer),
   shippingZone: o.shippingZone,
   shippingAddress: asShippingAddress(o.shippingAddress),
@@ -158,7 +163,7 @@ export const toOrderDetail = (o: OrderDetailRow, multiVendor: boolean, withCusto
   canCancel:
     CUSTOMER_CANCELLABLE_STATUSES.includes(o.status) &&
     o.subOrders.every((s) => CUSTOMER_CANCELLABLE_STATUSES.includes(s.status) || s.status === 'CANCELLED'),
-  canReturn: canReturnOrder(o),
+  canReturn: canReturnOrder(o, returnDays),
   canPay:
     o.paymentMethod !== 'COD' &&
     o.status === 'PENDING' &&

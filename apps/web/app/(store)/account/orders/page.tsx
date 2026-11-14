@@ -6,9 +6,7 @@ import { Package } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { useI18n } from '@/i18n/client';
-import { Button, ButtonLink, cn, EmptyState, ErrorState, Skeleton } from '@/components/ui';
-import { OrderStatusBadge, PaymentStatusBadge } from '@/components/ui/status';
+import { useI18n, Button, ButtonLink, cn, EmptyState, ErrorState, Skeleton, OrderStatusBadge, PaymentStatusBadge } from '@marketbd/ui';
 
 const TABS: Array<OrderStatus | undefined> = [undefined, 'PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURN_REQUESTED'];
 

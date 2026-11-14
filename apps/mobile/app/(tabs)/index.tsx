@@ -4,7 +4,7 @@ import {
   useCategoriesQuery,
   useQuickLinksQuery,
 } from '@marketbd/api-client';
-import { BRAND } from '@marketbd/shared';
+import { BANGLA_ENABLED, BRAND } from '@marketbd/shared';
 import { Image } from 'expo-image';
 import { Link, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -40,15 +40,21 @@ function HeroSlider() {
               const href = linkHref(item.linkType, item.linkValue);
               if (href) router.push(href);
               else void WebBrowser.openBrowserAsync(item.linkValue);
-            }}
-          >
-            <Image source={img(item.mobileImageUrl ?? item.imageUrl, slideW)} style={{ width: slideW, height: slideW / 2 }} contentFit="cover" />
+            }}>
+            <Image
+              source={img(item.mobileImageUrl ?? item.imageUrl, slideW)}
+              style={{ width: slideW, height: slideW / 2 }}
+              contentFit="cover"
+            />
           </Pressable>
         )}
       />
       <View className="absolute bottom-2 w-full flex-row justify-center gap-1.5">
         {banners.map((b, i) => (
-          <View key={b.id} className={`h-1.5 rounded-full ${i === index ? 'w-4 bg-white' : 'w-1.5 bg-white/60'}`} />
+          <View
+            key={b.id}
+            className={`h-1.5 rounded-full ${i === index ? 'w-4 bg-white' : 'w-1.5 bg-white/60'}`}
+          />
         ))}
       </View>
     </View>
@@ -66,9 +72,19 @@ function QuickLinks() {
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingHorizontal: 12, gap: 12 }}
       renderItem={({ item }) => (
-        <Pressable className="w-16 items-center gap-1" onPress={() => { const h = linkHref(item.linkType, item.linkValue); if (h) router.push(h); }}>
-          <Image source={img(item.iconUrl, 56)} style={{ width: 56, height: 56, borderRadius: 16 }} />
-          <Text numberOfLines={2} className="text-center text-[11px] text-ink-700">{pick(item.label, item.labelBn)}</Text>
+        <Pressable
+          className="w-16 items-center gap-1"
+          onPress={() => {
+            const h = linkHref(item.linkType, item.linkValue);
+            if (h) router.push(h);
+          }}>
+          <Image
+            source={img(item.iconUrl, 56)}
+            style={{ width: 56, height: 56, borderRadius: 16 }}
+          />
+          <Text numberOfLines={2} className="text-center text-[11px] text-ink-700">
+            {pick(item.label, item.labelBn)}
+          </Text>
         </Pressable>
       )}
     />
@@ -87,7 +103,9 @@ function FlashSale() {
           <Text className="text-base font-bold text-flash">{t.home.flashSale}</Text>
           <Countdown endsAt={sale.endAt} />
         </View>
-        <Link href="/flash-sale" className="text-xs font-semibold text-flash">{t.common.seeAll}</Link>
+        <Link href="/flash-sale" className="text-xs font-semibold text-flash">
+          {t.common.seeAll}
+        </Link>
       </View>
       <FlatList
         data={sale.items}
@@ -99,11 +117,20 @@ function FlashSale() {
           const pct = Math.min(100, (item.soldCount / item.stockLimit) * 100);
           const left = item.stockLimit - item.soldCount;
           return (
-            <Pressable className="w-28" onPress={() => router.push(`/product/${item.product.slug}`)}>
-              <Image source={img(item.product.imageUrl, 112)} style={{ width: 112, height: 112, borderRadius: 8 }} />
-              <Text numberOfLines={1} className="mt-1 text-[11px] text-ink-700">{pick(item.product.title, item.product.titleBn)}</Text>
+            <Pressable
+              className="w-28"
+              onPress={() => router.push(`/product/${item.product.slug}`)}>
+              <Image
+                source={img(item.product.imageUrl, 112)}
+                style={{ width: 112, height: 112, borderRadius: 8 }}
+              />
+              <Text numberOfLines={1} className="mt-1 text-[11px] text-ink-700">
+                {pick(item.product.title, item.product.titleBn)}
+              </Text>
               <Text className="text-sm font-bold text-flash">{money(item.specialPrice)}</Text>
-              <Text className="text-[10px] text-ink-400 line-through">{money(item.regularPrice)}</Text>
+              <Text className="text-[10px] text-ink-400 line-through">
+                {money(item.regularPrice)}
+              </Text>
               <View className="mt-1 h-3.5 overflow-hidden rounded-full bg-red-100">
                 <View className="h-full rounded-full bg-flash" style={{ width: `${pct}%` }} />
                 <Text className="absolute w-full text-center text-[9px] font-semibold text-ink-900">
@@ -123,12 +150,27 @@ function CategoryGrid() {
   const { data = [] } = useCategoriesQuery();
   return (
     <View className="mx-3">
-      <SectionTitle title={t.home.recommendedCategories} action={<Link href="/categories" className="text-xs font-semibold text-primary-700">{t.common.seeAll}</Link>} />
+      <SectionTitle
+        title={t.home.recommendedCategories}
+        action={
+          <Link href="/categories" className="text-xs font-semibold text-primary-700">
+            {t.common.seeAll}
+          </Link>
+        }
+      />
       <View className="flex-row flex-wrap gap-2">
         {data.slice(0, 8).map((c) => (
-          <Pressable key={c.id} className="w-[23%] items-center gap-1 rounded-lg bg-white p-2" onPress={() => router.push(`/category/${c.slug}`)}>
-            <Image source={img(c.imageUrl, 64)} style={{ width: '100%', aspectRatio: 1, borderRadius: 6 }} />
-            <Text numberOfLines={2} className="text-center text-[10px] text-ink-700">{pick(c.name, c.nameBn)}</Text>
+          <Pressable
+            key={c.id}
+            className="w-[23%] items-center gap-1 rounded-lg bg-white p-2"
+            onPress={() => router.push(`/category/${c.slug}`)}>
+            <Image
+              source={img(c.imageUrl, 64)}
+              style={{ width: '100%', aspectRatio: 1, borderRadius: 6 }}
+            />
+            <Text numberOfLines={2} className="text-center text-[10px] text-ink-700">
+              {pick(c.name, c.nameBn)}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -153,11 +195,17 @@ export default function HomeScreen() {
       <View className="bg-primary-700 px-3 pb-3" style={{ paddingTop: insets.top + 8 }}>
         <View className="mb-2 flex-row items-center justify-between">
           <Text className="text-xl font-bold text-white">{BRAND.name}</Text>
-          <Pressable onPress={() => setLocale(locale === 'en' ? 'bn' : 'en')} className="rounded border border-white/60 px-2 py-0.5">
-            <Text className="text-xs font-semibold text-white">{t.common.language}</Text>
-          </Pressable>
+          {BANGLA_ENABLED ? (
+            <Pressable
+              onPress={() => setLocale(locale === 'en' ? 'bn' : 'en')}
+              className="rounded border border-white/60 px-2 py-0.5">
+              <Text className="text-xs font-semibold text-white">{t.common.language}</Text>
+            </Pressable>
+          ) : null}
         </View>
-        <Pressable onPress={() => router.push('/search')} className="h-10 flex-row items-center gap-2 rounded-lg bg-white px-3">
+        <Pressable
+          onPress={() => router.push('/search')}
+          className="h-10 flex-row items-center gap-2 rounded-lg bg-white px-3">
           <Search size={18} color={colors.muted} />
           <Text className="text-sm text-ink-400">{t.common.searchPlaceholder}</Text>
         </Pressable>

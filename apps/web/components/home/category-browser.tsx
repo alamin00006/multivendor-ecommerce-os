@@ -4,8 +4,7 @@ import type { CategoryNode } from '@marketbd/shared';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { useI18n } from '@/i18n/client';
-import { cn } from '@/components/ui';
+import { useI18n, cn } from '@marketbd/ui';
 
 /** Two-pane category browser (left: parents, right: sub-categories), as on mobile shopping apps. */
 export function CategoryBrowser({ categories }: { categories: CategoryNode[] }) {

@@ -50,6 +50,9 @@ export const en = {
     backHome: 'Back to home',
   },
   home: {
+    dontMiss: "Don't miss out",
+    upToOff: 'Up to {n}% off',
+    dealsCantMiss: "Deals you can't miss",
     flashSale: 'Flash Sale',
     endsIn: 'Ending in',
     recommendedCategories: 'Recommended categories',
@@ -222,6 +225,9 @@ export const en = {
     PARTIALLY_REFUNDED: 'Partially refunded',
   },
   footer: {
+    followUs: 'Follow us on',
+    installApp: 'Install app',
+    appOffer: 'for exclusive discounts',
     about: 'About',
     aboutUs: 'About us',
     careers: 'Careers',

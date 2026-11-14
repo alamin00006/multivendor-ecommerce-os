@@ -1,4 +1,4 @@
-import { BadRequestException, BadGatewayException, Injectable } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, GatewayTimeoutException, Injectable } from '@nestjs/common';
 import { UPLOADS } from '@marketbd/shared';
 import { createHash } from 'node:crypto';
 import sharp from 'sharp';
@@ -13,6 +13,8 @@ export interface ResizedImage {
 const MAX_SOURCE_BYTES = 15 * 1024 * 1024;
 const CACHE_ENTRIES = 300;
 const CACHE_MAX_BYTES = 80 * 1024 * 1024;
+const SOURCE_TIMEOUT_MS = 6_000;
+const FAILURE_TTL_MS = 60_000;
 
 /** Snaps a requested width to the nearest allowed size so the cache stays small. */
 export const snapWidth = (width: number): number =>
@@ -23,6 +25,16 @@ export const snapWidth = (width: number): number =>
 export class ImagesService {
   private readonly cache = new Map<string, ResizedImage>();
   private cacheBytes = 0;
+  /** Source host → time until which it is treated as unavailable (simple circuit breaker). */
+  private readonly failures = new Map<string, number>();
+
+  private markFailed(host: string): void {
+    this.failures.set(host, Date.now() + FAILURE_TTL_MS);
+    if (this.failures.size > 2000) {
+      const now = Date.now();
+      for (const [key, until] of this.failures) if (until <= now) this.failures.delete(key);
+    }
+  }
 
   private assertAllowed(raw: string): URL {
     let url: URL;
@@ -65,8 +77,29 @@ export class ImagesService {
       return hit;
     }
 
-    const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(15_000) });
-    if (!res.ok) throw new BadGatewayException('Could not fetch the source image');
+    // A host that just failed fails fast for a minute, so a dead image host cannot tie up
+    // the browser's connections (and block page data) with one slow request per image.
+    const failedUntil = this.failures.get(url.host);
+    if (failedUntil && failedUntil > Date.now()) {
+      throw new GatewayTimeoutException('The source image is currently unavailable');
+    }
+
+    let res: Response;
+    try {
+      res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS) });
+    } catch (error) {
+      this.markFailed(url.host);
+      // Source host unreachable or too slow — a gateway problem, not a server bug.
+      if (error instanceof Error && error.name === 'TimeoutError') {
+        throw new GatewayTimeoutException('The source image took too long to respond');
+      }
+      throw new BadGatewayException('Could not reach the source image host');
+    }
+    if (!res.ok) {
+      this.markFailed(url.host);
+      throw new BadGatewayException('Could not fetch the source image');
+    }
+    this.failures.delete(url.host);
     const length = Number(res.headers.get('content-length') ?? 0);
     if (length > MAX_SOURCE_BYTES) throw new BadRequestException('Source image is too large');
     const source = Buffer.from(await res.arrayBuffer());

@@ -4,8 +4,7 @@ import { useMarkAllNotificationsReadMutation, useMarkNotificationReadMutation, u
 import { Bell } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
-import { useI18n } from '@/i18n/client';
-import { Button, cn, EmptyState, Skeleton } from '@/components/ui';
+import { useI18n, Button, cn, EmptyState, Skeleton } from '@marketbd/ui';
 
 export default function NotificationsPage() {
   const { t, locale } = useI18n();

@@ -1,0 +1,34 @@
+{
+  "name": "@marketbd/ui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared React components for the MarketBD Next.js apps (storefront + seller panel, admin).",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@marketbd/api-client": "workspace:*",
+    "@marketbd/shared": "workspace:*",
+    "@reduxjs/toolkit": "^2.14.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.70.0",
+    "react-redux": "^9.3.1",
+    "sonner": "^2.0.8"
+  },
+  "devDependencies": {
+    "@marketbd/config": "workspace:*",
+    "@types/react": "^19.3.0",
+    "eslint": "^10.14.0",
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "~6.0.3"
+  }
+}

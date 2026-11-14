@@ -1,12 +1,13 @@
 'use client';
 
-import { LayoutDashboard, Package, ShoppingBag, Store } from 'lucide-react';
-import { PanelLayout } from '@/components/manage/panel';
+import { LayoutDashboard, MessageCircleQuestion, Package, ShoppingBag, Store } from 'lucide-react';
+import { PanelLayout } from '@marketbd/ui';
 
 const NAV = [
   { href: '/seller', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/seller/products', label: 'Products', icon: Package },
   { href: '/seller/orders', label: 'Orders', icon: ShoppingBag },
+  { href: '/seller/questions', label: 'Questions', icon: MessageCircleQuestion },
   { href: '/seller/shop', label: 'Shop settings', icon: Store },
 ];
 

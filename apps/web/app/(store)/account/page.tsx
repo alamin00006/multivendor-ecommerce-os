@@ -7,8 +7,7 @@ import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { useI18n } from '@/i18n/client';
-import { Button } from '@/components/ui';
+import { useI18n, Button } from '@marketbd/ui';
 
 const ProfileSchema = z.object({ name: NameSchema });
 

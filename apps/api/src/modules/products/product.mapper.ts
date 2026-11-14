@@ -7,7 +7,7 @@ import {
   type VariantView,
 } from '@marketbd/shared';
 import type { Prisma } from '../../generated/prisma/client.js';
-import { asAttributes, num } from '../../common/utils.js';
+import { asAttributes, asSpecifications, num } from '../../common/utils.js';
 
 export const sellerSummarySelect = {
   id: true,
@@ -90,6 +90,10 @@ export const toProductCard = (p: ProductForCard, flash: FlashMap, multiVendor: b
     inStock: variants.some((v) => v.stock > 0),
     seller: multiVendor ? toSellerSummary(p.seller) : null,
     flash: activeFlash,
+    defaultVariant: best
+      ? { id: best.id, sku: best.sku, stock: best.stock, attributes: asAttributes(best.attributes) }
+      : null,
+    variantCount: variants.length,
   };
 };
 
@@ -108,6 +112,9 @@ export const toManagedProduct = (p: ProductForManage): ManagedProduct => ({
   titleBn: p.titleBn,
   description: p.description,
   descriptionBn: p.descriptionBn,
+  highlights: p.highlights,
+  specifications: asSpecifications(p.specifications),
+  warranty: p.warranty,
   status: p.status,
   categoryId: p.categoryId,
   brandId: p.brandId,

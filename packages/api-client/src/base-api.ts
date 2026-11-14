@@ -23,6 +23,7 @@ export const TAG_TYPES = [
   'Addresses',
   'Orders',
   'Reviews',
+  'Questions',
   'Campaigns',
   'FlashSale',
   'Banners',

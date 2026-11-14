@@ -5,10 +5,7 @@ import { ORDER_STATUSES, type OrderStatus } from '@marketbd/shared';
 import { ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
-import { fmtDate, PageHeader, Pager, Table } from '@/components/manage/panel';
-import { useI18n } from '@/i18n/client';
-import { EmptyState, Skeleton } from '@/components/ui';
-import { OrderStatusBadge, PaymentStatusBadge } from '@/components/ui/status';
+import { fmtDate, PageHeader, Pager, Table, useI18n, EmptyState, Skeleton, OrderStatusBadge, PaymentStatusBadge } from '@marketbd/ui';
 
 export default function SellerOrdersPage() {
   const { money } = useI18n();

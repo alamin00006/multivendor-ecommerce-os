@@ -2,9 +2,8 @@
 
 import type { FlashSaleView } from '@marketbd/shared';
 import { Zap } from 'lucide-react';
-import { useI18n } from '@/i18n/client';
+import { useI18n, ButtonLink, EmptyState } from '@marketbd/ui';
 import { Countdown, ProductGrid } from '@/components/product/product-card';
-import { ButtonLink, EmptyState } from '@/components/ui';
 
 export function FlashSalePage({ sale }: { sale: FlashSaleView | null }) {
   const { t, pick } = useI18n();

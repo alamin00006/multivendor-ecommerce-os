@@ -6,8 +6,7 @@ import { MapPin, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { AddressForm } from '@/components/forms/address-form';
-import { useI18n } from '@/i18n/client';
-import { Badge, Button, EmptyState, Modal, Skeleton } from '@/components/ui';
+import { useI18n, Badge, Button, EmptyState, Modal, Skeleton } from '@marketbd/ui';
 
 export default function AddressesPage() {
   const { t, pick } = useI18n();

@@ -7,7 +7,6 @@ import {
   type CheckoutPreviewInput,
   type PaymentInitResult,
   type PlaceOrderResult,
-  SHIPPING_FEES,
   type ShippingZone,
 } from '@marketbd/shared';
 import { generateOrderNumber, num, variantLabel } from '../../common/utils.js';
@@ -20,6 +19,7 @@ import { CouponsService } from '../coupons/coupons.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PaymentsService } from '../payments/payments.service.js';
 import { PlatformModeService } from '../platform/platform-mode.service.js';
+import { SettingsService } from '../platform/settings.service.js';
 import { toSellerSummary } from '../products/product.mapper.js';
 import { orderSummaryInclude, toOrderSummary } from './order.mapper.js';
 
@@ -30,8 +30,6 @@ interface PricedGroup {
   subtotal: number;
   shippingFee: number;
 }
-
-const shippingFor = (zone: ShippingZone | null) => (zone ? SHIPPING_FEES[zone] : SHIPPING_FEES.OUTSIDE_DHAKA);
 
 @Injectable()
 export class CheckoutService {
@@ -44,11 +42,13 @@ export class CheckoutService {
     private readonly coupons: CouponsService,
     private readonly payments: PaymentsService,
     private readonly mode: PlatformModeService,
+    private readonly settings: SettingsService,
     private readonly notifications: NotificationsService,
   ) {}
 
   /** Groups selected cart lines by seller. In single-vendor mode there is exactly one group. */
-  private group(lines: CartLine[], views: CartItemView[], zone: ShippingZone | null): PricedGroup[] {
+  /** shippingFee: per-package delivery fee in poisha (from Admin → Settings). */
+  private group(lines: CartLine[], views: CartItemView[], shippingFee: number): PricedGroup[] {
     const groups = new Map<string, PricedGroup>();
     lines.forEach((line, i) => {
       const view = views[i];
@@ -59,7 +59,7 @@ export class CheckoutService {
         commissionRate: 0,
         lines: [],
         subtotal: 0,
-        shippingFee: shippingFor(zone),
+        shippingFee,
       };
       g.lines.push({ line, view });
       g.subtotal += view.lineTotal;
@@ -87,7 +87,7 @@ export class CheckoutService {
       if (def) zone = def.area.isInsideDhaka ? 'INSIDE_DHAKA' : 'OUTSIDE_DHAKA';
     }
 
-    const groups = this.group(lines, okViews, zone);
+    const groups = this.group(lines, okViews, await this.settings.shippingFee(zone));
     const subtotal = groups.reduce((s, g) => s + g.subtotal, 0);
     const shippingFee = groups.reduce((s, g) => s + g.shippingFee, 0);
     let discount = 0;
@@ -140,7 +140,7 @@ export class CheckoutService {
           );
         }
 
-        const groups = this.group(lines, views, zone);
+        const groups = this.group(lines, views, await this.settings.shippingFee(zone));
         const sellers = await tx.sellerProfile.findMany({ where: { id: { in: groups.map((g) => g.sellerId) } } });
         for (const g of groups) g.commissionRate = num(sellers.find((s) => s.id === g.sellerId)?.commissionRate);
 

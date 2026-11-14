@@ -12,8 +12,7 @@ import {
 import { ADDRESS_LABELS, type AddressInput, AddressSchema, type AddressView } from '@marketbd/shared';
 import { useForm, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
-import { useI18n } from '@/i18n/client';
-import { Button } from '@/components/ui';
+import { useI18n, Button } from '@marketbd/ui';
 
 export function AddressForm({ address, onSaved }: { address?: AddressView; onSaved: (a: AddressView) => void }) {
   const { t, pick } = useI18n();

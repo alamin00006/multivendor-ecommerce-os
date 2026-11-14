@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { Hind_Siliguri, Inter, Poppins } from 'next/font/google';
 import { BRAND } from '@marketbd/shared';
-import { I18nProvider } from '@/i18n/client';
+import { AppProviders } from '@marketbd/ui';
 import { getLocale } from '@/i18n/server';
 import { SITE_URL } from '@/lib/server-api';
-import { StoreProvider } from '@/store/provider';
 import './globals.css';
 
 const hind = Hind_Siliguri({ subsets: ['bengali', 'latin'], weight: ['400', '500', '600', '700'], variable: '--font-hind' });
@@ -27,9 +26,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang={locale} className={`${hind.variable} ${inter.variable} ${poppins.variable}`}>
       <body className="min-h-dvh font-sans">
-        <I18nProvider locale={locale}>
-          <StoreProvider>{children}</StoreProvider>
-        </I18nProvider>
+        <AppProviders locale={locale} guestCart>
+          {children}
+        </AppProviders>
       </body>
     </html>
   );

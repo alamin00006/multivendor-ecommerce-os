@@ -21,8 +21,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { fill } from '@/i18n';
-import { useI18n } from '@/i18n/client';
-import { Button, cn } from '@/components/ui';
+import { useI18n, Button, cn } from '@marketbd/ui';
 
 /** Only allow same-site relative redirects after sign-in. */
 const safeNext = (next: string | null) => (next && next.startsWith('/') && !next.startsWith('//') ? next : '/');

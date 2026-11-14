@@ -1,9 +1,6 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import type { PublicSettings } from '@marketbd/shared';
 import type { Prisma } from '../../generated/prisma/client.js';
-import { PrismaService } from '../../prisma/prisma.service.js';
-
-const CACHE_TTL_MS = 30_000;
+import { SettingsService } from './settings.service.js';
 
 interface SellerLike {
   id: string;
@@ -20,34 +17,10 @@ interface SellerLike {
  */
 @Injectable()
 export class PlatformModeService {
-  private cached: { value: boolean; expiresAt: number } | null = null;
-
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly settings: SettingsService) {}
 
   async isMultiVendor(): Promise<boolean> {
-    if (this.cached && this.cached.expiresAt > Date.now()) return this.cached.value;
-    const row = await this.prisma.platformSetting.findUnique({ where: { id: 1 } });
-    const value = row?.multiVendorEnabled ?? true;
-    this.cached = { value, expiresAt: Date.now() + CACHE_TTL_MS };
-    return value;
-  }
-
-  async getPublicSettings(): Promise<PublicSettings> {
-    return { multiVendorEnabled: await this.isMultiVendor() };
-  }
-
-  async setMultiVendor(enabled: boolean, actorId: string): Promise<PublicSettings> {
-    await this.prisma.platformSetting.upsert({
-      where: { id: 1 },
-      update: { multiVendorEnabled: enabled, updatedById: actorId },
-      create: { id: 1, multiVendorEnabled: enabled, updatedById: actorId },
-    });
-    this.invalidate();
-    return { multiVendorEnabled: enabled };
-  }
-
-  invalidate(): void {
-    this.cached = null;
+    return (await this.settings.get()).multiVendorEnabled;
   }
 
   async assertMultiVendor(): Promise<void> {

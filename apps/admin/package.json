@@ -1,0 +1,40 @@
+{
+  "name": "@marketbd/admin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MarketBD admin panel (separate Next.js app)",
+  "scripts": {
+    "dev": "next dev -p 3101",
+    "build": "next build",
+    "start": "next start -p 3101",
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^7.0.5",
+    "@marketbd/api-client": "workspace:*",
+    "@marketbd/shared": "workspace:*",
+    "@marketbd/ui": "workspace:*",
+    "@reduxjs/toolkit": "^2.14.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.70.0",
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-hook-form": "^7.91.0",
+    "react-redux": "^9.3.1",
+    "sonner": "^2.0.8",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@marketbd/config": "workspace:*",
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.5",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

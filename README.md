@@ -41,7 +41,7 @@ Then start each app in its own terminal:
 
 ```bash
 pnpm --filter @marketbd/api dev           # http://localhost:4000/api/v1  · Swagger: http://localhost:4000/docs
-pnpm --filter @marketbd/web dev           # http://localhost:3000
+pnpm --filter @marketbd/web dev           # http://localhost:3100
 pnpm --filter @marketbd/mobile start      # Expo dev server → press a (Android) / i (iOS)
 ```
 
@@ -135,7 +135,7 @@ The e2e suite drops and recreates the `marketbd_test` database on every run. It 
 
 - Swagger / OpenAPI: http://localhost:4000/docs
 - MinIO console: http://localhost:9001 (user `marketbd`, password `marketbd-secret`)
-- Sitemap: http://localhost:3000/sitemap.xml
+- Sitemap: http://localhost:3100/sitemap.xml
 
 ## Libraries added beyond the core stack
 

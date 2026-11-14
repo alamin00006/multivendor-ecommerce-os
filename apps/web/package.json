@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3100",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3100",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit"
   },
@@ -13,6 +13,7 @@
     "@hookform/resolvers": "^7.0.3",
     "@marketbd/api-client": "workspace:*",
     "@marketbd/shared": "workspace:*",
+    "@marketbd/ui": "workspace:*",
     "@reduxjs/toolkit": "^2.14.0",
     "clsx": "^2.1.1",
     "embla-carousel-autoplay": "^8.6.0",

@@ -2,22 +2,65 @@
 
 import {
   useAddToCart,
+  useAvailableCouponsQuery,
   useMarketplaceMode,
+  useProductsQuery,
   useRelatedProductsQuery,
   useWishlistToggle,
 } from '@marketbd/api-client';
-import { discountPercent, type ProductDetail, SHIPPING_FEES, type VariantView } from '@marketbd/shared';
-import { BadgeCheck, Banknote, Heart, RotateCcw, ShieldCheck, Store, Truck, Zap } from 'lucide-react';
+import { discountPercent, type ProductCard as ProductCardData, type ProductDetail, SHIPPING_FEES, type VariantView } from '@marketbd/shared';
+import {
+  ArrowDown,
+  BadgeCheck,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  RotateCcw,
+  ShieldCheck,
+  Star,
+  Store,
+  Ticket,
+  Truck,
+  Zap,
+} from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { fill } from '@/i18n';
-import { useI18n } from '@/i18n/client';
-import { Button, ButtonLink, cn, QuantityStepper, SectionHeader, Stars } from '@/components/ui';
-import { Countdown, ProductGrid } from './product-card';
+import { useI18n, Button, cn, QuantityStepper, Stars } from '@marketbd/ui';
+import { DealsFeed } from '@/components/home/home-sections';
+import { Countdown, ProductCard } from './product-card';
 import { ProductReviews } from './product-reviews';
+
+/** Variant matching every selected option, if any. */
+const findVariant = (variants: VariantView[], sel: Record<string, string>) =>
+  variants.find((v) => Object.entries(sel).every(([k, val]) => v.attributes[k] === val)) ?? null;
+
+// ───────────────────────── Gallery ─────────────────────────
+
+/** Heart button on the main image corner (as in the reference layout). */
+function WishlistButton({ product }: { product: ProductDetail }) {
+  const { t } = useI18n();
+  const router = useRouter();
+  const wishlist = useWishlistToggle(product.id);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        if (!wishlist.authed) return router.push(`/login?next=/p/${product.slug}`);
+        await wishlist.toggle();
+      }}
+      className="absolute right-3 top-3 grid size-10 place-items-center rounded-full bg-white/90 shadow-card hover:bg-white"
+      aria-label={t.product.saveToWishlist}
+      aria-pressed={wishlist.saved}
+    >
+      <Heart className={cn('size-5', wishlist.saved ? 'fill-accent-500 text-accent-500' : 'text-ink-500')} />
+    </button>
+  );
+}
 
 function Gallery({ product, variantId }: { product: ProductDetail; variantId: string | null }) {
   const images = useMemo(() => {
@@ -26,291 +69,532 @@ function Gallery({ product, variantId }: { product: ProductDetail; variantId: st
   }, [product.images, variantId]);
   const [index, setIndex] = useState(0);
   const current = images[Math.min(index, images.length - 1)];
+  const pct = product.discountPercent;
   return (
-    <div className="space-y-3">
-      <div className="relative aspect-square overflow-hidden rounded-lg bg-ink-50">
-        {current && (
-          <Image src={current.url} alt={current.alt ?? product.title} fill priority sizes="(max-width: 768px) 100vw, 450px" className="object-cover" />
-        )}
-      </div>
-      <div className="scrollbar-none flex gap-2 overflow-x-auto">
+    <div className="flex flex-col-reverse gap-3 md:flex-row">
+      <div className="scrollbar-none flex gap-2 overflow-x-auto md:max-h-[640px] md:w-[72px] md:flex-col md:overflow-y-auto">
         {images.map((img, i) => (
           <button
             key={img.id}
             type="button"
             onMouseEnter={() => setIndex(i)}
             onClick={() => setIndex(i)}
-            className={cn('relative size-16 shrink-0 overflow-hidden rounded-md border-2', i === index ? 'border-primary-600' : 'border-transparent')}
+            className={cn(
+              'relative size-14 shrink-0 overflow-hidden rounded-md border-2 bg-ink-50 md:size-[72px]',
+              i === index ? 'border-primary-600' : 'border-transparent hover:border-ink-200',
+            )}
             aria-label={`Image ${i + 1}`}
           >
-            <Image src={img.url} alt="" fill sizes="64px" className="object-cover" />
+            <Image src={img.url} alt="" fill sizes="72px" className="object-cover" />
           </button>
+        ))}
+      </div>
+      <div className="relative aspect-square flex-1 overflow-hidden rounded-lg bg-ink-50">
+        {current && <Image src={current.url} alt={current.alt ?? product.title} fill priority sizes="(max-width: 768px) 100vw, 680px" className="object-cover" />}
+        {pct > 0 && (
+          <span className="absolute left-3 top-3 grid size-11 place-items-center rounded-full bg-accent-500 text-center text-[11px] font-bold leading-tight text-white">
+            {pct}%<br />OFF
+          </span>
+        )}
+        <WishlistButton product={product} />
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── Purchase state ─────────────────────────
+
+interface Purchase {
+  variant: VariantView | null;
+  selection: Record<string, string>;
+  select: (key: string, value: string) => void;
+  qty: number;
+  setQty: (q: number) => void;
+  price: number;
+  compareAt: number | null;
+  stock: number;
+  adding: boolean;
+  buy: (now: boolean) => Promise<void>;
+}
+
+function usePurchase(product: ProductDetail): Purchase {
+  const { t } = useI18n();
+  const router = useRouter();
+  const initial = product.variants.find((v) => v.stock > 0) ?? product.variants[0] ?? null;
+  const [selection, setSelection] = useState<Record<string, string>>(initial?.attributes ?? {});
+  const [qty, setQty] = useState(1);
+  const { add, isLoading } = useAddToCart();
+  const variant = findVariant(product.variants, selection);
+  const price = variant ? (variant.flash?.specialPrice ?? variant.price) : product.price;
+  const compareAt = variant ? (variant.flash ? variant.price : variant.compareAtPrice) : product.compareAtPrice;
+  return {
+    variant,
+    selection,
+    select: (key, value) => {
+      setSelection((s) => ({ ...s, [key]: value }));
+      setQty(1);
+    },
+    qty,
+    setQty,
+    price,
+    compareAt,
+    stock: variant?.stock ?? 0,
+    adding: isLoading,
+    buy: async (now) => {
+      if (!variant) {
+        toast.error(fill(t.product.selectOption, { name: Object.keys(product.options)[0] ?? '' }));
+        return;
+      }
+      const ok = await add(product, variant, qty);
+      if (!ok) toast.error(t.common.error);
+      else if (now) router.push('/cart');
+      else toast.success(t.product.added);
+    },
+  };
+}
+
+/** Option tiles: shows the variant's own image when it has one, otherwise a text chip. */
+function OptionPicker({ product, purchase, compact = false }: { product: ProductDetail; purchase: Purchase; compact?: boolean }) {
+  const available = (key: string, value: string) =>
+    product.variants.some(
+      (v) => v.attributes[key] === value && v.stock > 0 && Object.entries(purchase.selection).every(([k, val]) => k === key || v.attributes[k] === val),
+    );
+  return (
+    <>
+      {Object.entries(product.options).map(([key, values]) => (
+        <div key={key}>
+          <p className="mb-1.5 text-xs text-ink-500">
+            <span className="capitalize">{key}</span>: <span className="font-semibold text-ink-900">{purchase.selection[key] ?? '—'}</span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {values.map((value) => {
+              const selected = purchase.selection[key] === value;
+              const variant = product.variants.find((v) => v.attributes[key] === value);
+              const image = product.images.find((i) => i.variantId && i.variantId === variant?.id);
+              const ok = available(key, value);
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => purchase.select(key, value)}
+                  title={value}
+                  className={cn(
+                    'rounded-md border text-xs transition',
+                    image && !compact ? 'flex size-16 flex-col items-center justify-center gap-0.5 p-1' : 'min-w-10 px-2.5 py-1.5',
+                    selected ? 'border-primary-700 bg-primary-50 font-semibold text-primary-800 ring-1 ring-primary-700' : 'border-ink-200 hover:border-ink-400',
+                    !ok && 'text-ink-300 line-through',
+                  )}
+                >
+                  {image && !compact ? (
+                    <>
+                      <Image src={image.url} alt="" width={40} height={40} className="size-10 rounded object-cover" />
+                      <span className="truncate text-[10px]">{value}</span>
+                    </>
+                  ) : (
+                    value
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+// ───────────────────────── Info column ─────────────────────────
+
+function InfoRow({ icon, title, sub }: { icon: ReactNode; title: ReactNode; sub?: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 border-b border-ink-100 py-2.5 last:border-0">
+      <span className="text-primary-700">{icon}</span>
+      <span className="flex-1 text-[13px]">
+        <span className="font-semibold text-ink-800">{title}</span>
+        {sub && <span className="ml-1.5 text-ink-500">{sub}</span>}
+      </span>
+      <ChevronRight className="size-4 text-ink-300" />
+    </div>
+  );
+}
+
+function Vouchers() {
+  const { money } = useI18n();
+  const { data: coupons } = useAvailableCouponsQuery();
+  if (!coupons?.length) return null;
+  return (
+    <div>
+      <p className="mb-2 flex items-center gap-1 text-sm font-semibold">
+        Vouchers <ChevronRight className="size-4" />
+      </p>
+      <div className="scrollbar-none flex gap-2 overflow-x-auto">
+        {coupons.map((c) => (
+          <div key={c.id} className="w-60 shrink-0 rounded-lg border border-dashed border-accent-300 bg-accent-50 p-2.5">
+            <div className="flex items-start gap-2">
+              <Ticket className="mt-0.5 size-5 shrink-0 text-accent-600" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[11px] text-ink-600">{c.description ?? c.code}</p>
+                <p className="text-base font-bold text-accent-700">
+                  {c.type === 'PERCENTAGE' ? `${c.value}% off` : `${money(c.value)} off`}
+                </p>
+                <p className="text-[10px] text-ink-500">Min. spend {money(c.minOrderAmount)}</p>
+              </div>
+            </div>
+            <div className="mt-2 flex items-center justify-between border-t border-dashed border-accent-200 pt-2">
+              <span className="text-[10px] text-ink-400">Until {new Date(c.endsAt).toLocaleDateString('en-GB')}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(c.code);
+                  toast.success(`Code ${c.code} copied — apply it at checkout`);
+                }}
+                className="rounded-full bg-accent-500 px-3 py-0.5 text-[11px] font-semibold text-white hover:bg-accent-600"
+              >
+                Copy code
+              </button>
+            </div>
+          </div>
         ))}
       </div>
     </div>
   );
 }
 
-/** Picks the variant matching all selected options, if any. */
-const findVariant = (variants: VariantView[], selection: Record<string, string>) =>
-  variants.find((v) => Object.entries(selection).every(([k, val]) => v.attributes[k] === val)) ?? null;
+function ProductInfo({ product, purchase }: { product: ProductDetail; purchase: Purchase }) {
+  const { t, money, pick } = useI18n();
+  const { showSellerInfo } = useMarketplaceMode(product.seller !== null);
+  const { variant, price, compareAt, stock } = purchase;
+  const pct = discountPercent(price, compareAt);
+
+  return (
+    <div className="space-y-4">
+      {variant?.flash && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-gradient-to-r from-flash to-accent-500 px-3 py-2 text-white">
+          <span className="flex items-center gap-1 font-bold">
+            <Zap className="size-4 fill-white" /> {t.home.flashSale}
+          </span>
+          <span className="flex items-center gap-2 text-xs">
+            {variant.flash.soldCount} {t.common.sold} · {t.home.endsIn} <Countdown endsAt={variant.flash.endsAt} compact />
+          </span>
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        {product.brand && (
+          <Link href={`/search?brand=${product.brand.slug}`} className="text-sm font-semibold text-primary-700 hover:underline">
+            {product.brand.name}
+          </Link>
+        )}
+        <h1 className="text-lg font-semibold leading-snug text-ink-900 md:text-xl">
+            {showSellerInfo && product.seller && (
+              <span className="mr-1.5 inline-flex -translate-y-0.5 items-center gap-0.5 rounded bg-primary-50 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase text-primary-700">
+                <BadgeCheck className="size-3" /> {product.seller.isHouseStore ? 'Official' : 'Verified'}
+              </span>
+            )}
+            {pick(product.title, product.titleBn)}
+          </h1>
+        <a href="#reviews" className="flex items-center gap-1.5 text-sm">
+          <span className="font-semibold">{product.ratingAvg.toFixed(1)}</span>
+          <Stars value={product.ratingAvg} />
+          <span className="text-primary-700">({product.ratingCount} reviews)</span>
+          <span className="text-ink-400">· {product.soldCount.toLocaleString()} {t.common.sold}</span>
+        </a>
+      </div>
+
+      <div className="flex flex-wrap items-baseline gap-2">
+        {pct > 0 && (
+          <span className="flex items-center text-sm font-semibold text-success">
+            <ArrowDown className="size-3.5" />
+            {pct}%
+          </span>
+        )}
+        {compareAt && compareAt > price && <span className="text-sm text-ink-400 line-through">{money(compareAt)}</span>}
+        <span className="text-3xl font-bold text-accent-600">{money(price)}</span>
+      </div>
+
+      <OptionPicker product={product} purchase={purchase} />
+
+      <div>
+        <p className="mb-1.5 text-xs text-ink-500">{t.product.quantity}</p>
+        <div className="flex items-center gap-3">
+          <QuantityStepper value={purchase.qty} max={Math.max(1, Math.min(stock, 20))} onChange={purchase.setQty} disabled={stock === 0} />
+          <span className={cn('text-xs', stock === 0 ? 'text-danger' : stock <= 5 ? 'font-semibold text-flash' : 'text-ink-500')}>
+            {stock === 0 ? t.common.outOfStock : stock <= 5 ? fill(t.product.onlyLeft, { n: stock }) : t.common.inStock}
+          </span>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-ink-100 px-3">
+        <InfoRow
+          icon={<Truck className="size-4" />}
+          title={`Standard Delivery ${money(SHIPPING_FEES.INSIDE_DHAKA)}`}
+          sub={`Inside Dhaka 1–2 days · Outside Dhaka ${money(SHIPPING_FEES.OUTSIDE_DHAKA)}, 3–5 days`}
+        />
+        <InfoRow icon={<RotateCcw className="size-4" />} title="7 Days Returns" sub={t.product.cod} />
+        <InfoRow icon={<ShieldCheck className="size-4" />} title={t.product.warranty} />
+      </div>
+
+      <Vouchers />
+
+      <div className="hidden gap-3 md:flex">
+        <Button size="lg" variant="accent" className="flex-1" disabled={stock === 0} loading={purchase.adding} onClick={() => void purchase.buy(true)}>
+          {t.product.buyNow}
+        </Button>
+        <Button size="lg" className="flex-1" disabled={stock === 0} loading={purchase.adding} onClick={() => void purchase.buy(false)}>
+          {t.product.addToCart}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── Sections ─────────────────────────
+
+const TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'details', label: 'Product Details' },
+  { id: 'specs', label: 'Specifications' },
+  { id: 'reviews', label: 'Reviews' },
+  { id: 'seller', label: 'Seller' },
+  { id: 'recommended', label: 'Recommended' },
+];
+
+/** Id of the section currently under the sticky header (scroll-spy for the tab row). */
+function useActiveSection(ids: string[]) {
+  const [active, setActive] = useState(ids[0] ?? '');
+  const key = ids.join(',');
+  useEffect(() => {
+    const sections = key
+      .split(',')
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => Boolean(el));
+    if (!sections.length) return;
+    const onScroll = () => {
+      // The last section whose top has passed the sticky header + tab row wins.
+      let current = sections[0]!.id;
+      for (const el of sections) if (el.getBoundingClientRect().top <= 200) current = el.id;
+      setActive(current);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [key]);
+  return active;
+}
+
+/** Section whose body collapses to a preview with a "See more" button. */
+function Collapsible({ children, height = 220 }: { children: ReactNode; height?: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <div className={cn('relative overflow-hidden', !open && 'max-h-[var(--h)]')} style={{ ['--h' as string]: `${height}px` }}>
+        {children}
+        {!open && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white" />}
+      </div>
+      <div className="mt-2 text-center">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="inline-flex items-center gap-1 rounded-full bg-ink-100 px-4 py-1.5 text-xs font-semibold text-ink-700 hover:bg-ink-200"
+        >
+          {open ? 'See less' : 'See more'} <ChevronDown className={cn('size-3.5 transition', open && 'rotate-180')} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Horizontal product row with arrow controls (4 cards visible on desktop). */
+function ProductRow({ title, products }: { title: string; products: ProductCardData[] }) {
+  const row = useRef<HTMLDivElement>(null);
+  if (!products.length) return null;
+  const scroll = (dir: 1 | -1) => row.current?.scrollBy({ left: dir * row.current.clientWidth * 0.8, behavior: 'smooth' });
+  return (
+    <section>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="font-semibold text-ink-900">{title}</h2>
+        <div className="flex gap-1.5">
+          <button type="button" onClick={() => scroll(-1)} className="rounded-full bg-white p-1.5 shadow-card hover:bg-ink-50" aria-label="Previous">
+            <ChevronLeft className="size-4" />
+          </button>
+          <button type="button" onClick={() => scroll(1)} className="rounded-full bg-white p-1.5 shadow-card hover:bg-ink-50" aria-label="Next">
+            <ChevronRight className="size-4" />
+          </button>
+        </div>
+      </div>
+      <div ref={row} className="scrollbar-none flex gap-3 overflow-x-auto scroll-smooth">
+        {products.map((p) => (
+          <div key={p.id} className="w-40 shrink-0 sm:w-[calc((100%-3*0.75rem)/4)]">
+            <ProductCard product={p} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Small sticky buy box shown beside the long content on desktop. */
+function StickyBuyBox({ product, purchase }: { product: ProductDetail; purchase: Purchase }) {
+  const { t, money, pick } = useI18n();
+  const { stock } = purchase;
+  return (
+    <div className="card sticky top-44 space-y-4 p-5">
+      <div className="flex gap-3">
+        <div className="relative size-20 shrink-0 overflow-hidden rounded-md bg-ink-50">
+          {product.images[0] && <Image src={product.images[0].url} alt="" fill sizes="80px" className="object-cover" />}
+        </div>
+        <p className="line-clamp-3 text-sm text-ink-700">{pick(product.title, product.titleBn)}</p>
+      </div>
+      <p className="flex items-baseline gap-2">
+        <span className="text-3xl font-bold text-accent-600">{money(purchase.price)}</span>
+        {purchase.compareAt && purchase.compareAt > purchase.price && (
+          <span className="text-sm text-ink-400 line-through">{money(purchase.compareAt)}</span>
+        )}
+      </p>
+      <OptionPicker product={product} purchase={purchase} compact />
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-ink-500">{t.product.quantity}</span>
+        <QuantityStepper value={purchase.qty} max={Math.max(1, Math.min(stock, 20))} onChange={purchase.setQty} disabled={stock === 0} />
+      </div>
+      <div className="flex gap-2">
+        <Button variant="accent" className="flex-1" disabled={stock === 0} loading={purchase.adding} onClick={() => void purchase.buy(true)}>
+          {t.product.buyNow}
+        </Button>
+        <Button className="flex-1" disabled={stock === 0} loading={purchase.adding} onClick={() => void purchase.buy(false)}>
+          {t.product.addToCart}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── Page ─────────────────────────
 
 export function ProductView({ product }: { product: ProductDetail }) {
-  const { t, money, pick } = useI18n();
-  const router = useRouter();
+  const { t, pick } = useI18n();
   const { showSellerInfo } = useMarketplaceMode(product.seller !== null);
-  const initialVariant = product.variants.find((v) => v.stock > 0) ?? product.variants[0] ?? null;
-  const [selection, setSelection] = useState<Record<string, string>>(initialVariant?.attributes ?? {});
-  const [qty, setQty] = useState(1);
-  const variant = findVariant(product.variants, selection);
-  const { add, isLoading } = useAddToCart();
-  const wishlist = useWishlistToggle(product.id);
+  const purchase = usePurchase(product);
   const { data: related } = useRelatedProductsQuery(product.slug);
-
-  const price = variant ? (variant.flash?.specialPrice ?? variant.price) : product.price;
-  const compareAt = variant ? (variant.flash ? variant.price : variant.compareAtPrice) : product.compareAtPrice;
-  const pct = discountPercent(price, compareAt);
-  const stock = variant?.stock ?? 0;
+  const { data: sellerProducts } = useProductsQuery(
+    { seller: product.seller?.slug, limit: 12, sort: 'popular' },
+    { skip: !showSellerInfo || !product.seller },
+  );
+  const description = pick(product.description, product.descriptionBn);
+  const [lead, ...rest] = description.split(/\n+/);
   const optionKeys = Object.keys(product.options);
-
-  /** Whether choosing `value` for `key` (keeping the other selections) leads to an in-stock variant. */
-  const optionAvailable = (key: string, value: string) =>
-    product.variants.some(
-      (v) => v.attributes[key] === value && v.stock > 0 && Object.entries(selection).every(([k, val]) => k === key || v.attributes[k] === val),
-    );
-
-  const handleAdd = async (buyNow: boolean) => {
-    if (!variant) {
-      toast.error(fill(t.product.selectOption, { name: optionKeys[0] ?? '' }));
-      return;
-    }
-    const ok = await add(product, variant, qty);
-    if (!ok) {
-      toast.error(t.common.error);
-      return;
-    }
-    if (buyNow) router.push('/cart');
-    else toast.success(t.product.added);
-  };
-
-  const toggleWishlist = async () => {
-    if (!wishlist.authed) {
-      router.push(`/login?next=/p/${product.slug}`);
-      return;
-    }
-    await wishlist.toggle();
-  };
+  const tabs = TABS.filter((tab) => tab.id !== 'seller' || (showSellerInfo && product.seller));
+  const activeTab = useActiveSection(tabs.map((tab) => tab.id));
 
   return (
     <div className="space-y-4 pb-20 md:pb-0">
-      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
-        <div className="card grid gap-6 p-4 md:grid-cols-[minmax(0,420px)_1fr]">
-          <Gallery product={product} variantId={variant?.id ?? null} />
+      <div id="overview" className="card grid scroll-mt-48 gap-6 p-4 md:grid-cols-2 md:p-5 lg:grid-cols-[minmax(0,1fr)_520px]">
+        <Gallery product={product} variantId={purchase.variant?.id ?? null} />
+        <ProductInfo product={product} purchase={purchase} />
+      </div>
 
-          <div className="space-y-4">
-            {variant?.flash && (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-gradient-to-r from-flash to-accent-500 px-3 py-2 text-white">
-                <span className="flex items-center gap-1 font-bold">
-                  <Zap className="size-4 fill-white" /> {t.home.flashSale}
-                </span>
-                <span className="flex items-center gap-2 text-xs">
-                  {variant.flash.soldCount} {t.common.sold} · {t.home.endsIn} <Countdown endsAt={variant.flash.endsAt} compact />
-                </span>
-              </div>
+      <nav className="scrollbar-none sticky top-[7.5rem] z-10 -mx-3 flex gap-7 overflow-x-auto border-b border-ink-200 bg-canvas px-3 text-sm md:top-[6.5rem] md:mx-0 md:px-1">
+        {tabs.map((tab) => (
+          <a
+            key={tab.id}
+            href={`#${tab.id}`}
+            aria-current={activeTab === tab.id ? 'true' : undefined}
+            className={cn(
+              '-mb-px whitespace-nowrap border-b-2 py-3 transition-colors',
+              activeTab === tab.id ? 'border-primary-700 font-semibold text-primary-700' : 'border-transparent text-ink-600 hover:text-primary-700',
             )}
-            <div>
-              {(product.brand || (showSellerInfo && product.seller)) && (
-                <p className="mb-1 flex flex-wrap items-center gap-2 text-sm text-ink-500">
-                  {product.brand && (
-                    <span>
-                      {t.product.brand}:{' '}
-                      <Link href={`/search?brand=${product.brand.slug}`} className="text-primary-700 hover:underline">
-                        {product.brand.name}
-                      </Link>
-                    </span>
-                  )}
-                  {showSellerInfo && product.seller?.isHouseStore && (
-                    <span className="inline-flex items-center gap-1 text-primary-700">
-                      <BadgeCheck className="size-4" /> Official
-                    </span>
-                  )}
-                </p>
-              )}
-              <h1 className="text-xl font-semibold leading-snug text-ink-900 md:text-2xl">{pick(product.title, product.titleBn)}</h1>
-              <a href="#reviews" className="mt-2 flex items-center gap-2 text-sm text-ink-500">
-                <Stars value={product.ratingAvg} />
-                <span className="text-primary-700">
-                  {product.ratingAvg.toFixed(1)} · {product.ratingCount} {t.common.reviews}
-                </span>
-                <span>· {product.soldCount.toLocaleString()} {t.common.sold}</span>
-              </a>
-            </div>
+          >
+            {tab.label}
+          </a>
+        ))}
+      </nav>
 
-            <div className="rounded-lg bg-ink-50 p-3">
-              <div className="flex flex-wrap items-baseline gap-3">
-                <span className="text-3xl font-bold text-accent-600">{money(price)}</span>
-                {compareAt && compareAt > price && (
-                  <>
-                    <span className="text-ink-400 line-through">{money(compareAt)}</span>
-                    <span className="rounded bg-accent-500 px-1.5 py-0.5 text-xs font-bold text-white">-{pct}%</span>
-                  </>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-w-0 space-y-4">
+          <section id="details" className="card scroll-mt-48 p-5">
+            <h2 className="mb-3 font-semibold text-ink-900">Product Details</h2>
+            <Collapsible>
+              <h3 className="mb-2 font-semibold">{pick(product.title, product.titleBn)}</h3>
+              <p className="text-sm leading-relaxed text-ink-700">{lead}</p>
+              {rest.map((para) => (
+                <p key={para} className="mt-2 text-sm leading-relaxed text-ink-700">
+                  {para}
+                </p>
+              ))}
+            </Collapsible>
+          </section>
+
+          <section id="specs" className="card scroll-mt-48 p-5">
+            <h2 className="mb-3 font-semibold text-ink-900">Specifications</h2>
+            <dl className="divide-y divide-ink-100 rounded-lg border border-ink-100 text-sm">
+              {product.brand && (
+                <div className="grid grid-cols-[160px_1fr] px-3 py-2"><dt className="text-ink-500">{t.product.brand}</dt><dd>{product.brand.name}</dd></div>
+              )}
+              <div className="grid grid-cols-[160px_1fr] px-3 py-2">
+                <dt className="text-ink-500">{t.product.category}</dt>
+                <dd>
+                  <Link href={`/c/${product.category.slug}`} className="text-primary-700 hover:underline">
+                    {pick(product.category.name, product.category.nameBn)}
+                  </Link>
+                </dd>
+              </div>
+              <div className="grid grid-cols-[160px_1fr] px-3 py-2"><dt className="text-ink-500">{t.product.sku}</dt><dd>{purchase.variant?.sku ?? product.variants[0]?.sku}</dd></div>
+              {optionKeys.map((k) => (
+                <div key={k} className="grid grid-cols-[160px_1fr] px-3 py-2">
+                  <dt className="capitalize text-ink-500">{k}</dt>
+                  <dd>{product.options[k]!.join(', ')}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          <ProductReviews productId={product.id} />
+
+          {showSellerInfo && product.seller && (
+            <section id="seller" className="card flex scroll-mt-48 flex-wrap items-center gap-3 p-4">
+              <div className="relative size-12 overflow-hidden rounded-lg bg-ink-50">
+                {product.seller.logoUrl && <Image src={product.seller.logoUrl} alt="" fill sizes="48px" className="object-cover" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1 font-semibold">
+                  {product.seller.shopName}
+                  {product.seller.isHouseStore && <BadgeCheck className="size-4 text-primary-600" />}
+                </p>
+                {product.seller.ratingAvg > 0 && (
+                  <p className="flex items-center gap-1 text-xs text-ink-500">
+                    <Star className="size-3 fill-warning text-warning" /> {product.seller.ratingAvg.toFixed(1)} seller rating
+                  </p>
                 )}
               </div>
-            </div>
+              <Link
+                href={`/shop/${product.seller.slug}`}
+                className="flex items-center gap-1 rounded-md bg-accent-50 px-3 py-1.5 text-xs font-semibold text-accent-700 hover:bg-accent-100"
+              >
+                <Store className="size-3.5" /> {t.common.visitStore} <ChevronRight className="size-3.5" />
+              </Link>
+            </section>
+          )}
 
-            {optionKeys.map((key) => (
-              <div key={key}>
-                <p className="mb-2 text-sm">
-                  <span className="capitalize text-ink-500">{key}:</span> <span className="font-semibold">{selection[key] ?? '—'}</span>
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {product.options[key]!.map((value) => {
-                    const selected = selection[key] === value;
-                    const available = optionAvailable(key, value);
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => {
-                          setSelection((s) => ({ ...s, [key]: value }));
-                          setQty(1);
-                        }}
-                        className={cn(
-                          'min-w-12 rounded-md border px-3 py-1.5 text-sm transition',
-                          selected ? 'border-primary-700 bg-primary-50 font-semibold text-primary-800' : 'border-ink-200 hover:border-ink-400',
-                          !available && 'text-ink-300 line-through',
-                        )}
-                      >
-                        {value}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm text-ink-500">{t.product.quantity}</span>
-              <QuantityStepper value={qty} max={Math.max(1, Math.min(stock, 20))} onChange={setQty} disabled={stock === 0} />
-              <span className={cn('text-sm', stock === 0 ? 'text-danger' : stock <= 5 ? 'font-semibold text-flash' : 'text-ink-500')}>
-                {stock === 0 ? t.common.outOfStock : stock <= 5 ? fill(t.product.onlyLeft, { n: stock }) : t.common.inStock}
-              </span>
-            </div>
-
-            <div className="hidden gap-3 md:flex">
-              <Button size="lg" variant="accent" className="flex-1" disabled={stock === 0} loading={isLoading} onClick={() => void handleAdd(true)}>
-                {t.product.buyNow}
-              </Button>
-              <Button size="lg" className="flex-1" disabled={stock === 0} loading={isLoading} onClick={() => void handleAdd(false)}>
-                {t.product.addToCart}
-              </Button>
-              <Button size="lg" variant="ghost" onClick={() => void toggleWishlist()} aria-label={t.product.saveToWishlist}>
-                <Heart className={cn('size-5', wishlist.saved && 'fill-accent-500 text-accent-500')} />
-              </Button>
-            </div>
-
-            <ul className="flex flex-wrap gap-x-4 gap-y-2 border-t border-ink-100 pt-3 text-xs text-ink-600">
-              <li className="flex items-center gap-1.5">
-                <RotateCcw className="size-4 text-primary-600" /> {t.product.returns}
-              </li>
-              <li className="flex items-center gap-1.5">
-                <ShieldCheck className="size-4 text-primary-600" /> {t.product.warranty}
-              </li>
-              <li>
-                {t.product.category}:{' '}
-                <Link href={`/c/${product.category.slug}`} className="text-primary-700 hover:underline">
-                  {pick(product.category.name, product.category.nameBn)}
-                </Link>
-              </li>
-            </ul>
+          <div id="recommended" className="scroll-mt-48 space-y-5">
+            {showSellerInfo && (
+              <ProductRow title="More from this Seller" products={(sellerProducts?.items ?? []).filter((p) => p.id !== product.id)} />
+            )}
+            <ProductRow title="Similar items" products={related ?? []} />
           </div>
         </div>
 
-        <aside className="space-y-4">
-          <div className="card space-y-3 p-4 text-sm">
-            <h2 className="font-semibold">{t.product.delivery}</h2>
-            <p className="flex items-start gap-2">
-              <Truck className="mt-0.5 size-4 text-primary-600" />
-              <span>
-                {t.product.insideDhaka}: <b>{money(SHIPPING_FEES.INSIDE_DHAKA)}</b> · 1–2 days
-                <br />
-                {t.product.outsideDhaka}: <b>{money(SHIPPING_FEES.OUTSIDE_DHAKA)}</b> · 3–5 days
-              </span>
-            </p>
-            <p className="flex items-center gap-2">
-              <Banknote className="size-4 text-primary-600" /> {t.product.cod}
-            </p>
-          </div>
-          {showSellerInfo && product.seller && (
-            <div className="card space-y-3 p-4">
-              <p className="text-xs text-ink-500">{t.common.soldBy}</p>
-              <div className="flex items-center gap-3">
-                <div className="relative size-12 overflow-hidden rounded-lg bg-ink-50">
-                  {product.seller.logoUrl && <Image src={product.seller.logoUrl} alt="" fill sizes="48px" className="object-cover" />}
-                </div>
-                <div className="min-w-0">
-                  <p className="flex items-center gap-1 truncate font-semibold">
-                    {product.seller.shopName}
-                    {product.seller.isHouseStore && <BadgeCheck className="size-4 text-primary-600" />}
-                  </p>
-                  <p className="flex items-center gap-1 text-xs text-ink-500">
-                    <Stars value={product.seller.ratingAvg} size={11} /> {product.seller.ratingAvg.toFixed(1)}
-                  </p>
-                </div>
-              </div>
-              <ButtonLink href={`/shop/${product.seller.slug}`} variant="outline" size="sm" className="w-full">
-                <Store className="size-4" /> {t.common.visitStore}
-              </ButtonLink>
-            </div>
-          )}
+        <aside className="hidden lg:block">
+          <StickyBuyBox product={product} purchase={purchase} />
         </aside>
       </div>
 
-      <nav className="card sticky top-[7.5rem] z-10 flex gap-6 overflow-x-auto px-4 text-sm font-semibold md:top-24">
-        <a href="#description" className="border-b-2 border-transparent py-3 hover:border-primary-700">{t.product.description}</a>
-        <a href="#specs" className="border-b-2 border-transparent py-3 hover:border-primary-700">{t.product.specifications}</a>
-        <a href="#reviews" className="border-b-2 border-transparent py-3 hover:border-primary-700">{t.product.ratingsReviews}</a>
-      </nav>
-
-      <section id="description" className="card scroll-mt-40 p-4">
-        <h2 className="mb-3 font-semibold">{t.product.description}</h2>
-        <div className="whitespace-pre-line text-sm leading-relaxed text-ink-700">{pick(product.description, product.descriptionBn)}</div>
-      </section>
-
-      <section id="specs" className="card scroll-mt-40 p-4">
-        <h2 className="mb-3 font-semibold">{t.product.specifications}</h2>
-        <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-          {product.brand && (
-            <div className="flex gap-2"><dt className="w-32 text-ink-500">{t.product.brand}</dt><dd>{product.brand.name}</dd></div>
-          )}
-          <div className="flex gap-2"><dt className="w-32 text-ink-500">{t.product.sku}</dt><dd>{variant?.sku ?? product.variants[0]?.sku}</dd></div>
-          {optionKeys.map((k) => (
-            <div key={k} className="flex gap-2">
-              <dt className="w-32 capitalize text-ink-500">{k}</dt>
-              <dd>{product.options[k]!.join(', ')}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <ProductReviews productId={product.id} />
-
-      {related && related.length > 0 && (
-        <section>
-          <SectionHeader title={t.product.related} />
-          <ProductGrid products={related} />
-        </section>
-      )}
+      <DealsFeed />
 
       {/* Mobile sticky action bar */}
       <div className="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-ink-100 bg-white p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
-        <Button variant="ghost" onClick={() => void toggleWishlist()} aria-label={t.product.saveToWishlist}>
-          <Heart className={cn('size-5', wishlist.saved && 'fill-accent-500 text-accent-500')} />
-        </Button>
-        <Button variant="accent" className="flex-1" disabled={stock === 0} loading={isLoading} onClick={() => void handleAdd(true)}>
+        <Button variant="accent" className="flex-1" disabled={purchase.stock === 0} loading={purchase.adding} onClick={() => void purchase.buy(true)}>
           {t.product.buyNow}
         </Button>
-        <Button className="flex-1" disabled={stock === 0} loading={isLoading} onClick={() => void handleAdd(false)}>
+        <Button className="flex-1" disabled={purchase.stock === 0} loading={purchase.adding} onClick={() => void purchase.buy(false)}>
           {t.product.addToCart}
         </Button>
       </div>

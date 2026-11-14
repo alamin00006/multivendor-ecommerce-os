@@ -7,8 +7,7 @@ import { BadgeCheck, Clock, Store, TrendingUp, Truck } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import { toast } from 'sonner';
-import { RequireAuth } from '@/components/auth/require-auth';
-import { Badge, Button, ButtonLink, Skeleton } from '@/components/ui';
+import { RequireAuth, Badge, Button, ButtonLink, Skeleton } from '@marketbd/ui';
 
 function Application() {
   const user = useSelector(selectUser);
