@@ -1,88 +1,127 @@
-import {
-  useActiveFlashSaleQuery,
-  useBannersQuery,
-  useCategoriesQuery,
-  useQuickLinksQuery,
-} from '@marketbd/api-client';
-import { BANGLA_ENABLED, BRAND } from '@marketbd/shared';
+import { useActiveFlashSaleQuery, useBannersQuery, useCategoriesQuery, useQuickLinksQuery } from '@marketbd/api-client';
+import { BANGLA_ENABLED, type FlashSaleItemView } from '@marketbd/shared';
 import { Image } from 'expo-image';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { Search, Zap } from 'lucide-react-native';
-import { useState } from 'react';
-import { FlatList, Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { ArrowRight, ArrowUp, Search, ShoppingCart } from 'lucide-react-native';
+import { useRef, useState } from 'react';
+import { FlatList, Pressable, RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Countdown } from '@/components/product-card';
-import { ProductList } from '@/components/product-list';
-import { colors, SectionTitle } from '@/components/ui';
+import { Countdown, DealsGrid, useCardAddToCart } from '@/components/product-card';
+import { colors } from '@/components/ui';
 import { useI18n } from '@/i18n';
 import { img } from '@/lib/config';
 import { linkHref } from '@/lib/links';
+
+const openLink = (type: Parameters<typeof linkHref>[0], value: string) => {
+  const href = linkHref(type, value);
+  if (href) router.push(href);
+  else void WebBrowser.openBrowserAsync(value);
+};
+
+/** Brand-colour header: search box and a row of category text tabs ("All" + root categories). */
+function HomeHeader() {
+  const insets = useSafeAreaInsets();
+  const { t, pick, locale, setLocale } = useI18n();
+  const { data: categories = [] } = useCategoriesQuery();
+  return (
+    <View className="bg-primary-700" style={{ paddingTop: insets.top + 8 }}>
+      <View className="flex-row items-center gap-2 px-3">
+        <Pressable onPress={() => router.push('/search')} className="h-12 flex-1 flex-row items-center rounded-xl bg-white pl-4 pr-1.5">
+          <Text className="flex-1 text-base text-ink-400">{t.common.searchPlaceholder}</Text>
+          <View className="size-9 items-center justify-center rounded-lg bg-primary-800">
+            <Search size={20} color="#fff" />
+          </View>
+        </Pressable>
+        {BANGLA_ENABLED ? (
+          <Pressable onPress={() => setLocale(locale === 'en' ? 'bn' : 'en')} className="rounded border border-white/60 px-2 py-1">
+            <Text className="text-xs font-semibold text-white">{t.common.language}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 22, paddingHorizontal: 14 }} className="mt-2">
+        <View className="border-b-2 border-white pb-1.5 pt-1">
+          <Text className="text-lg font-semibold text-white">All</Text>
+        </View>
+        {categories.map((c) => (
+          <Pressable key={c.id} onPress={() => router.push(`/category/${c.slug}`)} className="pb-1.5 pt-1">
+            <Text className="text-lg text-white/90">{pick(c.name, c.nameBn)}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
 
 function HeroSlider() {
   const { width } = useWindowDimensions();
   const { data: banners = [] } = useBannersQuery('HOME_HERO');
   const [index, setIndex] = useState(0);
-  const slideW = width - 24;
   if (!banners.length) return null;
   return (
-    <View className="mx-3 overflow-hidden rounded-xl">
+    <View>
       <FlatList
         data={banners}
         keyExtractor={(b) => b.id}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / slideW))}
+        onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
         renderItem={({ item }) => (
-          <Pressable
-            onPress={() => {
-              const href = linkHref(item.linkType, item.linkValue);
-              if (href) router.push(href);
-              else void WebBrowser.openBrowserAsync(item.linkValue);
-            }}>
-            <Image
-              source={img(item.mobileImageUrl ?? item.imageUrl, slideW)}
-              style={{ width: slideW, height: slideW / 2 }}
-              contentFit="cover"
-            />
+          <Pressable onPress={() => openLink(item.linkType, item.linkValue)}>
+            <Image source={img(item.mobileImageUrl ?? item.imageUrl, width)} style={{ width, height: width * 0.45 }} contentFit="cover" />
           </Pressable>
         )}
       />
       <View className="absolute bottom-2 w-full flex-row justify-center gap-1.5">
         {banners.map((b, i) => (
-          <View
-            key={b.id}
-            className={`h-1.5 rounded-full ${i === index ? 'w-4 bg-white' : 'w-1.5 bg-white/60'}`}
-          />
+          <View key={b.id} className={`h-1.5 rounded-full ${i === index ? 'w-4 bg-white' : 'w-1.5 bg-white/60'}`} />
         ))}
       </View>
     </View>
   );
 }
 
+/** Promo cards under the hero (mid-page banners), each with a caption strip. */
+function PromoCards() {
+  const { data: promos = [] } = useBannersQuery('HOME_MID');
+  if (!promos.length) return null;
+  return (
+    <FlatList
+      data={promos}
+      horizontal
+      keyExtractor={(b) => b.id}
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ gap: 10, paddingHorizontal: 12 }}
+      renderItem={({ item }) => (
+        <Pressable onPress={() => openLink(item.linkType, item.linkValue)} className="w-56 overflow-hidden rounded-xl bg-white">
+          <Image source={img(item.mobileImageUrl ?? item.imageUrl, 224)} style={{ width: 224, height: 150 }} contentFit="cover" />
+          <Text numberOfLines={2} className="px-2 py-2 text-center text-[15px] font-semibold text-ink-900">
+            {item.title}
+          </Text>
+        </Pressable>
+      )}
+    />
+  );
+}
+
 function QuickLinks() {
   const { pick } = useI18n();
   const { data = [] } = useQuickLinksQuery();
+  if (!data.length) return null;
   return (
     <FlatList
       data={data}
       horizontal
       keyExtractor={(q) => q.id}
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal: 12, gap: 12 }}
+      contentContainerStyle={{ paddingHorizontal: 12, gap: 10 }}
       renderItem={({ item }) => (
-        <Pressable
-          className="w-16 items-center gap-1"
-          onPress={() => {
-            const h = linkHref(item.linkType, item.linkValue);
-            if (h) router.push(h);
-          }}>
-          <Image
-            source={img(item.iconUrl, 56)}
-            style={{ width: 56, height: 56, borderRadius: 16 }}
-          />
-          <Text numberOfLines={2} className="text-center text-[11px] text-ink-700">
+        <Pressable className="w-[86px] items-center gap-1.5" onPress={() => openLink(item.linkType, item.linkValue)}>
+          <View className="size-[86px] items-center justify-center rounded-xl bg-white">
+            <Image source={img(item.iconUrl, 64)} style={{ width: 64, height: 64 }} contentFit="contain" />
+          </View>
+          <Text numberOfLines={2} className="text-center text-[13px] text-ink-800">
             {pick(item.label, item.labelBn)}
           </Text>
         </Pressable>
@@ -91,126 +130,92 @@ function QuickLinks() {
   );
 }
 
-function FlashSale() {
-  const { t, money, pick } = useI18n();
-  const { data: sale } = useActiveFlashSaleQuery();
-  if (!sale || !sale.items.length) return null;
+function FlashItem({ item }: { item: FlashSaleItemView }) {
+  const { money, pick } = useI18n();
+  const { onAdd } = useCardAddToCart(item.product);
+  const save = item.regularPrice - item.specialPrice;
   return (
-    <View className="mx-3 rounded-xl bg-white p-3">
-      <View className="mb-3 flex-row items-center justify-between">
-        <View className="flex-row items-center gap-2">
-          <Zap size={18} color={colors.flash} fill={colors.flash} />
-          <Text className="text-base font-bold text-flash">{t.home.flashSale}</Text>
-          <Countdown endsAt={sale.endAt} />
-        </View>
-        <Link href="/flash-sale" className="text-xs font-semibold text-flash">
-          {t.common.seeAll}
-        </Link>
+    <Pressable onPress={() => router.push(`/product/${item.product.slug}`)} className="w-44 overflow-hidden rounded-xl bg-white">
+      <View>
+        <Image source={img(item.product.imageUrl, 176)} style={{ width: 176, height: 150 }} contentFit="cover" />
+        {save > 0 ? (
+          <View className="absolute left-0 top-0 rounded-br-lg bg-green-100 px-2 py-0.5">
+            <Text className="text-xs font-bold text-success">SAVE {money(save)}</Text>
+          </View>
+        ) : null}
       </View>
-      <FlatList
-        data={sale.items}
-        horizontal
-        keyExtractor={(i) => i.id}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8 }}
-        renderItem={({ item }) => {
-          const pct = Math.min(100, (item.soldCount / item.stockLimit) * 100);
-          const left = item.stockLimit - item.soldCount;
-          return (
-            <Pressable
-              className="w-28"
-              onPress={() => router.push(`/product/${item.product.slug}`)}>
-              <Image
-                source={img(item.product.imageUrl, 112)}
-                style={{ width: 112, height: 112, borderRadius: 8 }}
-              />
-              <Text numberOfLines={1} className="mt-1 text-[11px] text-ink-700">
-                {pick(item.product.title, item.product.titleBn)}
-              </Text>
-              <Text className="text-sm font-bold text-flash">{money(item.specialPrice)}</Text>
-              <Text className="text-[10px] text-ink-400 line-through">
-                {money(item.regularPrice)}
-              </Text>
-              <View className="mt-1 h-3.5 overflow-hidden rounded-full bg-red-100">
-                <View className="h-full rounded-full bg-flash" style={{ width: `${pct}%` }} />
-                <Text className="absolute w-full text-center text-[9px] font-semibold text-ink-900">
-                  {left <= 5 ? t.common.limitedStock : `${item.soldCount} ${t.common.sold}`}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        }}
-      />
-    </View>
+      <View className="gap-1 p-2">
+        <Text numberOfLines={2} className="min-h-[36px] text-[13px] leading-[18px] text-ink-800">
+          {pick(item.product.title, item.product.titleBn)}
+        </Text>
+        <View className="flex-row items-end justify-between">
+          <View>
+            <Text className="text-base font-bold text-accent-600">{money(item.specialPrice)}</Text>
+            <Text className="text-xs text-ink-400 line-through">{money(item.regularPrice)}</Text>
+          </View>
+          <Pressable onPress={() => void onAdd()} accessibilityLabel="Add to cart" className="size-9 items-center justify-center rounded-lg bg-primary-50">
+            <ShoppingCart size={18} color={colors.primaryDark} />
+          </Pressable>
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
-function CategoryGrid() {
-  const { t, pick } = useI18n();
-  const { data = [] } = useCategoriesQuery();
+/** Flash sale strip: a title panel with a big countdown and "View All", then the sale items. */
+function FlashSale() {
+  const { t } = useI18n();
+  const { data: sale } = useActiveFlashSaleQuery();
+  if (!sale || !sale.items.length) return null;
   return (
-    <View className="mx-3">
-      <SectionTitle
-        title={t.home.recommendedCategories}
-        action={
-          <Link href="/categories" className="text-xs font-semibold text-primary-700">
-            {t.common.seeAll}
-          </Link>
-        }
-      />
-      <View className="flex-row flex-wrap gap-2">
-        {data.slice(0, 8).map((c) => (
-          <Pressable
-            key={c.id}
-            className="w-[23%] items-center gap-1 rounded-lg bg-white p-2"
-            onPress={() => router.push(`/category/${c.slug}`)}>
-            <Image
-              source={img(c.imageUrl, 64)}
-              style={{ width: '100%', aspectRatio: 1, borderRadius: 6 }}
-            />
-            <Text numberOfLines={2} className="text-center text-[10px] text-ink-700">
-              {pick(c.name, c.nameBn)}
-            </Text>
+    <View className="bg-primary-50 py-3">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 12 }}>
+        <View className="w-48 items-center justify-center gap-3 rounded-xl bg-white p-3">
+          <Text className="text-center text-3xl font-black italic text-flash">{t.home.flashSale.toUpperCase()}</Text>
+          <Text className="font-bold text-ink-900">{t.home.dontMiss}!</Text>
+          <Countdown endsAt={sale.endAt} boxed />
+          <Pressable onPress={() => router.push('/flash-sale')} className="w-full flex-row items-center justify-center gap-1.5 rounded-lg bg-primary-700 py-2.5">
+            <Text className="font-semibold text-white">{t.common.seeAll}</Text>
+            <ArrowRight size={16} color="#fff" />
           </Pressable>
+        </View>
+        {sale.items.map((item) => (
+          <FlashItem key={item.id} item={item} />
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 }
 
 export default function HomeScreen() {
-  const { t, locale, setLocale } = useI18n();
-  const insets = useSafeAreaInsets();
-  const header = (
-    <View className="gap-4 pb-2">
-      <HeroSlider />
-      <QuickLinks />
-      <FlashSale />
-      <CategoryGrid />
-      <Text className="mx-3 text-lg font-bold text-ink-900">{t.home.dealsForYou}</Text>
-    </View>
-  );
+  const scroll = useRef<ScrollView>(null);
+  const [showTop, setShowTop] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   return (
     <View className="flex-1 bg-canvas">
-      <View className="bg-primary-700 px-3 pb-3" style={{ paddingTop: insets.top + 8 }}>
-        <View className="mb-2 flex-row items-center justify-between">
-          <Text className="text-xl font-bold text-white">{BRAND.name}</Text>
-          {BANGLA_ENABLED ? (
-            <Pressable
-              onPress={() => setLocale(locale === 'en' ? 'bn' : 'en')}
-              className="rounded border border-white/60 px-2 py-0.5">
-              <Text className="text-xs font-semibold text-white">{t.common.language}</Text>
-            </Pressable>
-          ) : null}
-        </View>
+      <HomeHeader />
+      <ScrollView
+        ref={scroll}
+        onScroll={(e) => setShowTop(e.nativeEvent.contentOffset.y > 900)}
+        scrollEventThrottle={64}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={() => setRefreshKey((k) => k + 1)} tintColor={colors.primary} />}
+        contentContainerStyle={{ paddingBottom: 24, gap: 14 }}
+      >
+        <HeroSlider />
+        <PromoCards />
+        <QuickLinks />
+        <FlashSale />
+        <DealsGrid key={refreshKey} />
+      </ScrollView>
+      {showTop ? (
         <Pressable
-          onPress={() => router.push('/search')}
-          className="h-10 flex-row items-center gap-2 rounded-lg bg-white px-3">
-          <Search size={18} color={colors.muted} />
-          <Text className="text-sm text-ink-400">{t.common.searchPlaceholder}</Text>
+          onPress={() => scroll.current?.scrollTo({ y: 0, animated: true })}
+          accessibilityLabel="Back to top"
+          className="absolute bottom-5 right-4 size-14 items-center justify-center rounded-full bg-ink-500/80"
+        >
+          <ArrowUp size={28} color="#fff" />
         </Pressable>
-      </View>
-      <ProductList params={{ sort: 'popular' }} header={header} />
+      ) : null}
     </View>
   );
 }

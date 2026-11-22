@@ -8,5 +8,6 @@ import { OrdersService } from './orders.service.js';
   imports: [AddressesModule],
   controllers: [OrdersController, SellerOrdersController, AdminOrdersController],
   providers: [CheckoutService, OrdersService],
+  exports: [OrdersService],
 })
 export class OrdersModule {}

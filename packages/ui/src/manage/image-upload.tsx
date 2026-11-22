@@ -41,11 +41,14 @@ export function ImageListField({
   onChange,
   folder,
   max = 10,
+  coverLabel = true,
 }: {
   value: string[];
   onChange: (urls: string[]) => void;
   folder: UploadFolder;
   max?: number;
+  /** Marks the first image as the cover (product galleries). */
+  coverLabel?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const { uploadFiles, uploading } = useImageUpload(folder);
@@ -54,7 +57,7 @@ export function ImageListField({
       {value.map((url, i) => (
         <div key={url} className="relative size-24 overflow-hidden rounded-lg border border-ink-100">
           <Image src={url} alt="" fill sizes="96px" className="object-cover" />
-          {i === 0 && <span className="absolute bottom-0 inset-x-0 bg-primary-700 py-0.5 text-center text-[10px] text-white">Cover</span>}
+          {coverLabel && i === 0 && <span className="absolute bottom-0 inset-x-0 bg-primary-700 py-0.5 text-center text-[10px] text-white">Cover</span>}
           <button
             type="button"
             onClick={() => onChange(value.filter((u) => u !== url))}

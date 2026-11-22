@@ -9,7 +9,7 @@ import {
   useUpdateStockMutation,
 } from '@marketbd/api-client';
 import { PRODUCT_STATUSES, type ProductStatus } from '@marketbd/shared';
-import { Package, Pencil, Plus, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, Package, Pencil, Plus, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -44,9 +44,16 @@ export function ProductTable({ scope }: { scope: 'seller' | 'admin' }) {
         title="Products"
         description={data ? `${data.meta.total} products` : undefined}
         actions={
-          <ButtonLink href={`${productsPath(scope)}/new`}>
-            <Plus className="size-4" /> Add product
-          </ButtonLink>
+          <>
+            {scope === 'seller' && (
+              <ButtonLink href="/seller/products/bulk" variant="outline">
+                <FileSpreadsheet className="size-4" /> Bulk price & stock
+              </ButtonLink>
+            )}
+            <ButtonLink href={`${productsPath(scope)}/new`}>
+              <Plus className="size-4" /> Add product
+            </ButtonLink>
+          </>
         }
       />
       <div className="card">

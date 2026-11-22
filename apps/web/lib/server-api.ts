@@ -1,3 +1,4 @@
+import { type BrandTheme, DEFAULT_BRAND_COLORS } from '@marketbd/shared';
 import 'server-only';
 import type { ApiResponse, PaginationMeta } from '@marketbd/shared';
 
@@ -41,6 +42,12 @@ export async function apiTry<T>(path: string, options: Options = {}): Promise<T 
   } catch {
     return null;
   }
+}
+
+/** Brand colours at server render (short cache so Admin → Settings changes show up quickly). */
+export async function getBrandTheme(): Promise<BrandTheme> {
+  const settings = await apiTry<{ theme?: BrandTheme }>('/settings/public', { revalidate: 15, tags: ['settings'] });
+  return settings?.theme ?? DEFAULT_BRAND_COLORS;
 }
 
 /** Marketplace mode at server render (short cache so admin toggles show up quickly). */

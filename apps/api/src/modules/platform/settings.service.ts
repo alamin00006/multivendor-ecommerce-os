@@ -19,6 +19,7 @@ const asSocial = (value: unknown): PublicSettings['store']['social'] => {
 
 export const toPublicSettings = (row: PlatformSetting): PublicSettings => ({
   multiVendorEnabled: row.multiVendorEnabled,
+  theme: { primary: row.brandPrimary, accent: row.brandAccent },
   shipping: {
     insideDhaka: row.shippingInsideDhaka,
     outsideDhaka: row.shippingOutsideDhaka,

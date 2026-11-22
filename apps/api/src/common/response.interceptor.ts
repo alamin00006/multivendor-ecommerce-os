@@ -11,6 +11,8 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<un
   constructor(private readonly reflector: Reflector) {}
 
   intercept(context: ExecutionContext, next: CallHandler<T>): Observable<ApiResponse<unknown>> {
+    // Only HTTP responses use the envelope; Socket.IO acks pass through unchanged.
+    if (context.getType() !== 'http') return next.handle() as unknown as Observable<ApiResponse<unknown>>;
     const message =
       this.reflector.getAllAndOverride<string | undefined>(RESPONSE_MESSAGE_KEY, [
         context.getHandler(),

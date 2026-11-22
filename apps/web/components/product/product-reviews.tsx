@@ -76,6 +76,12 @@ export function ProductReviews({ productId }: { productId: string }) {
                 </span>
               </div>
               {r.comment && <p className="text-sm text-ink-700">{r.comment}</p>}
+              {r.sellerReply && (
+                <div className="rounded-md border-l-2 border-primary-600 bg-primary-50 px-3 py-2 text-sm">
+                  <p className="text-xs font-semibold text-primary-800">Seller’s response</p>
+                  <p className="mt-0.5 text-ink-700">{r.sellerReply}</p>
+                </div>
+              )}
               {r.images.length > 0 && (
                 <div className="flex gap-2">
                   {r.images.map((src) => (

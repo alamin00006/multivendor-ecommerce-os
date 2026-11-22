@@ -11,6 +11,7 @@ import type {
   CategoryInput,
   CategoryNode,
   CouponInput,
+  SellerCouponInput,
   CouponView,
   FlashSaleInput,
   FlashSaleView,
@@ -52,6 +53,7 @@ export interface AdminReturnRow {
   imageUrls: string[];
   status: ReturnStatus;
   adminNote: string | null;
+  sellerNote: string | null;
   createdAt: string;
 }
 
@@ -281,6 +283,20 @@ export const managementApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/admin/coupons/${id}`, method: 'DELETE' }),
       invalidatesTags: ['AdminCoupons', 'Coupons'],
     }),
+    sellerCoupons: b.query<CouponView[], void>({
+      query: () => '/seller/coupons',
+      transformResponse: unwrap<CouponView[]>,
+      providesTags: ['SellerCoupons'],
+    }),
+    sellerSaveCoupon: b.mutation<CouponView, { id?: string; body: SellerCouponInput }>({
+      query: ({ id, body }) => ({ url: id ? `/seller/coupons/${id}` : '/seller/coupons', method: id ? 'PATCH' : 'POST', body }),
+      transformResponse: unwrap<CouponView>,
+      invalidatesTags: ['SellerCoupons', 'Coupons'],
+    }),
+    sellerDeleteCoupon: b.mutation<null, string>({
+      query: (id) => ({ url: `/seller/coupons/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['SellerCoupons', 'Coupons'],
+    }),
     adminOrders: b.query<Page<OrderSummary>, OrderListQuery>({
       query: (params) => `/admin/orders${qs(params)}`,
       transformResponse: unwrapPage<OrderSummary>,
@@ -371,6 +387,9 @@ export const {
   useAdminCouponsQuery,
   useAdminSaveCouponMutation,
   useAdminDeleteCouponMutation,
+  useSellerCouponsQuery,
+  useSellerSaveCouponMutation,
+  useSellerDeleteCouponMutation,
   useAdminOrdersQuery,
   useAdminOrderQuery,
   useAdminSetOrderStatusMutation,

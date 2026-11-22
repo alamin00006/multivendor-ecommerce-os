@@ -13,6 +13,13 @@ import { apiConfig, persistTokens } from './config.js';
 
 export const TAG_TYPES = [
   'Me',
+  'Chat',
+  'PosProducts',
+  'Earnings',
+  'Payouts',
+  'SellerReturns',
+  'SellerReviews',
+  'SellerReports',
   'Settings',
   'Categories',
   'Brands',
@@ -30,6 +37,7 @@ export const TAG_TYPES = [
   'QuickLinks',
   'Notifications',
   'Coupons',
+  'SellerCoupons',
   'SellerProfile',
   'SellerProducts',
   'SellerOrders',

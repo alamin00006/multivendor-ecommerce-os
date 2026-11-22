@@ -18,6 +18,8 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   exact?: boolean;
+  /** Small count bubble, e.g. unread messages. */
+  badge?: number;
 }
 
 /** Sidebar layout shared by the seller and admin panels. */
@@ -40,7 +42,7 @@ export function PanelLayout({
 
   const sidebar = (
     <nav className="flex flex-col gap-0.5 p-3">
-      {nav.map(({ href, label, icon: Icon, exact }) => {
+      {nav.map(({ href, label, icon: Icon, exact, badge }) => {
         const active = exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link
@@ -53,6 +55,9 @@ export function PanelLayout({
             )}
           >
             <Icon className="size-4" /> {label}
+            {badge ? (
+              <span className="ml-auto rounded-full bg-accent-500 px-1.5 text-[10px] font-bold text-white">{badge > 99 ? '99+' : badge}</span>
+            ) : null}
           </Link>
         );
       })}

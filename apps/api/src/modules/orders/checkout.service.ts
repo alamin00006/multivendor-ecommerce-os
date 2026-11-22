@@ -14,7 +14,6 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { addressInclude, AddressesService } from '../addresses/addresses.service.js';
 import { type CartLine, toCartItemView } from '../cart/cart-pricing.js';
 import { CartService } from '../cart/cart.service.js';
-import { allocateDiscount } from '../coupons/coupon-calculator.js';
 import { CouponsService } from '../coupons/coupons.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PaymentsService } from '../payments/payments.service.js';
@@ -94,11 +93,14 @@ export class CheckoutService {
     let coupon: CheckoutPreview['coupon'] = null;
     let couponError: string | null = null;
     if (input.couponCode && subtotal > 0) {
-      const check = await this.coupons.check(input.couponCode, userId, subtotal);
+      const check = await this.coupons.check(input.couponCode, userId, {
+        groups: groups.map((g) => ({ sellerId: g.sellerId, subtotal: g.subtotal, shippingFee: g.shippingFee })),
+        paymentMethod: input.paymentMethod,
+      });
       if ('error' in check) couponError = check.error;
       else {
-        discount = check.discount;
-        coupon = { code: check.coupon.code, discount };
+        discount = check.result.discount;
+        coupon = { code: check.coupon.code, discount, appliesTo: check.result.appliesTo };
       }
     }
     const checkoutGroups: CheckoutGroup[] = groups.map((g) => ({
@@ -148,16 +150,25 @@ export class CheckoutService {
         const shippingFee = groups.reduce((s, g) => s + g.shippingFee, 0);
         let discount = 0;
         let couponId: string | null = null;
+        let discounts = groups.map(() => 0);
+        // Delivery-fee vouchers do not reduce the item value sellers pay commission on.
+        let itemsDiscounted = true;
         if (input.couponCode) {
-          const check = await this.coupons.check(input.couponCode, userId, subtotal, tx);
+          const check = await this.coupons.check(
+            input.couponCode,
+            userId,
+            {
+              groups: groups.map((g) => ({ sellerId: g.sellerId, subtotal: g.subtotal, shippingFee: g.shippingFee })),
+              paymentMethod: input.paymentMethod,
+            },
+            tx,
+          );
           if ('error' in check) throw new BadRequestException(check.error);
-          discount = check.discount;
+          discount = check.result.discount;
+          discounts = check.result.allocation;
+          itemsDiscounted = check.result.appliesTo === 'items';
           couponId = check.coupon.id;
         }
-        const discounts = allocateDiscount(
-          discount,
-          groups.map((g) => g.subtotal),
-        );
 
         // Reserve stock (and flash allocation) atomically; any shortfall aborts the transaction.
         const flashItemIds = new Map<string, string>();
@@ -220,7 +231,7 @@ export class CheckoutService {
 
         for (const [gi, g] of groups.entries()) {
           const groupDiscount = discounts[gi] ?? 0;
-          const commissionBase = Math.max(0, g.subtotal - groupDiscount);
+          const commissionBase = Math.max(0, g.subtotal - (itemsDiscounted ? groupDiscount : 0));
           const sub = await tx.subOrder.create({
             data: {
               orderId: created.id,

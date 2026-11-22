@@ -145,6 +145,7 @@ export const en = {
       COD: 'Cash on Delivery',
       BKASH: 'bKash',
       SSLCOMMERZ: 'Card / Mobile banking (SSLCommerz)',
+      CASH: 'Cash (store counter)',
     },
     unavailableMethod: 'Currently unavailable',
     successTitle: 'Thank you! Your order is placed.',

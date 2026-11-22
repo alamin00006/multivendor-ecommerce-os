@@ -19,8 +19,8 @@ export function ProductList({ params, header }: { params: Omit<ProductListQuery,
       data={data?.items ?? []}
       keyExtractor={(p) => p.id}
       numColumns={2}
-      columnWrapperStyle={{ gap: 8, paddingHorizontal: 12 }}
-      contentContainerStyle={{ gap: 8, paddingBottom: 24 }}
+      columnWrapperStyle={{ gap: 10, paddingHorizontal: 12 }}
+      contentContainerStyle={{ gap: 10, paddingTop: 10, paddingBottom: 24 }}
       renderItem={({ item }) => <ProductCard product={item} />}
       ListHeaderComponent={header}
       onEndReachedThreshold={0.6}

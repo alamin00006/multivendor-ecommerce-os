@@ -98,6 +98,40 @@ The admin turns the mode on or off at **Admin → Settings**. The change needs n
 - **Product Q&A:** signed-in customers ask questions on the product page. The seller answers in **Seller Center → Questions** (the admin answers for the house store or in single-vendor mode). The asker gets a notification. Admins can hide questions in **Admin → Questions**.
 - **Frequently bought together** is computed from orders that were not cancelled (`GET /products/:slug/bought-together`).
 
+## Vouchers
+
+- **Kinds:**
+  - **MarketBD (platform):** applies to the whole order.
+  - **Store:** applies to one shop's items. The seller funds it and manages it in **Seller Center → Vouchers**; admins can create one for any shop.
+  - **Payment:** applies to the whole order, but only when the customer pays with a chosen online method such as bKash.
+- **Types:** percent off (with an optional cap), amount off, or **free delivery**. A free-delivery voucher takes the discount off the delivery fee; its value caps the discount, and 0 covers the whole fee. It does not lower the item value that sellers pay commission on.
+- **Customers:**
+  - **Voucher Center:** collect vouchers in **Account → Voucher Center**.
+  - **My Voucher:** see collected vouchers in **Account → My Voucher** (Available / Used / Expired).
+  - **Checkout:** apply one voucher per order. The list shows collected vouchers first and explains blockers such as "Add ৳X more" or "Pay with bKash".
+- **Visibility:** store vouchers follow their shop's visibility, so they are hidden in single-vendor mode. The database enforces that store vouchers have a shop and payment vouchers have a method.
+
+## Customer ↔ seller chat
+
+- **Starting a chat:** customers tap **Chat** on a product page (web and app). The thread opens with that product attached to the first message.
+- **Inboxes:**
+  - customers: **Account → Messages** on the web, the **Message** tab in the app
+  - sellers: **Seller Center → Messages**
+  - house store: **Admin → Messages**, where admins answer
+- **Single-vendor mode:** customers chat with the store only, shown under the brand name. Threads with marketplace sellers are hidden, not deleted, and sellers cannot use chat.
+- **Unread and notifications:** each side has its own unread count and a "Seen" marker. The first message of an unread streak sends a notification.
+- **Real-time (Socket.IO):**
+  - **Connection:** the API serves a `/chat` namespace. Clients connect with their access token (`auth: { token }`) and join a room for their user, so every tab and device receives events.
+  - **Events:** `chat:message`, `chat:read` ("Seen" and unread badges) and `chat:typing` ("typing…").
+  - **Sending:** messages are still sent over REST, which validates and stores them, then pushes the event.
+  - **Fallback:** while the socket is disconnected, screens poll instead (thread every 4 s, inbox every 15 s).
+  - **Rate limit:** sending is limited to 30 messages per minute.
+- **Socket address:**
+  - **Web and admin:** they connect straight to the API origin, because Next rewrites do not proxy WebSockets. Set `NEXT_PUBLIC_API_ORIGIN` (default `http://localhost:4000`), and keep the web and admin origins in the API's `CORS_ORIGINS`.
+  - **App:** it uses `EXPO_PUBLIC_API_URL` without the `/api/v1` suffix.
+- **More than one API instance:** add the Socket.IO Redis adapter (`@socket.io/redis-adapter`) so events reach users connected to other instances.
+- **API:** the endpoints are under `/chat`. Sellers and admins use `/seller/chat` and `/admin/chat` for their inbox and unread count.
+
 ## How things fit together
 
 - **Validation:** request bodies and queries are validated with the Zod schemas in `@marketbd/shared`. The web and mobile forms use the same schemas through `react-hook-form` + `zodResolver` or `Schema.safeParse`.
@@ -147,6 +181,6 @@ The e2e suite drops and recreates the `marketbd_test` database on every run. It 
 
 ## Libraries added beyond the core stack
 
-argon2 (password hashing), helmet, cookie-parser, @nestjs/throttler (rate limiting), @nestjs/swagger, @aws-sdk/client-s3, sharp (image processing), react-hook-form + @hookform/resolvers, lucide-react / lucide-react-native (icons), embla-carousel (hero slider), sonner (toasts), react-markdown (category SEO content), expo-image, expo-secure-store, expo-web-browser, @react-native-async-storage/async-storage.
+argon2 (password hashing), helmet, cookie-parser, @nestjs/throttler (rate limiting), @nestjs/swagger, @aws-sdk/client-s3, sharp (image processing), react-hook-form + @hookform/resolvers, lucide-react / lucide-react-native (icons), embla-carousel (hero slider), sonner (toasts), react-markdown (category SEO content), @nestjs/websockets + @nestjs/platform-socket.io + socket.io / socket.io-client (chat), expo-image, expo-secure-store, expo-web-browser, @react-native-async-storage/async-storage.
 
 The upstream MinIO image is no longer published on Docker Hub. `docker-compose.yml` therefore uses `pgsty/minio`, a maintained community build of the same server.

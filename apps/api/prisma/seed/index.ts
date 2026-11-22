@@ -589,7 +589,29 @@ async function seedMerchandising(productIds: string[]) {
     ],
   });
 
-  console.log(`✓ 2 campaigns, 1 flash sale (${flashVariants.length} items), 6 banners, 8 quick links, 2 coupons`);
+  // Voucher Center variety: free delivery, shop vouchers (each shop funds its own) and a payment voucher.
+  const shops = await prisma.sellerProfile.findMany({ select: { id: true, slug: true, isHouseStore: true } });
+  const shopId = (slug: string) => shops.find((x) => x.slug === slug)?.id ?? null;
+  const house = shops.find((x) => x.isHouseStore)?.id ?? null;
+  const window = { startsAt: new Date(now - DAY), endsAt: new Date(now + 30 * DAY) };
+  await prisma.coupon.createMany({
+    data: [
+      { code: 'FREESHIP', description: 'Free delivery on orders above ৳499', type: 'FREE_SHIPPING', value: 0, minOrderAmount: toPoisha(499), perUserLimit: 3, ...window },
+      { code: 'SHIP60', description: '৳60 off delivery, no minimum', type: 'FREE_SHIPPING', value: toPoisha(60), perUserLimit: 1, startsAt: new Date(now - DAY), endsAt: new Date(now + 7 * DAY) },
+      { code: 'BKASH15', description: '15% off up to ৳300 when you pay with bKash', type: 'PERCENTAGE', value: 15, maxDiscount: toPoisha(300), minOrderAmount: toPoisha(1000), perUserLimit: 2, scope: 'PAYMENT', paymentMethod: 'BKASH', ...window },
+      ...(shopId('gadget-ghor')
+        ? [{ code: 'GADGET5', description: '5% off Gadget Ghor, up to ৳1,000', type: 'PERCENTAGE' as const, value: 5, maxDiscount: toPoisha(1000), minOrderAmount: toPoisha(2000), perUserLimit: 2, scope: 'STORE' as const, sellerId: shopId('gadget-ghor'), ...window }]
+        : []),
+      ...(shopId('deshi-bazar')
+        ? [{ code: 'DESHI50', description: '৳50 off Deshi Bazar orders above ৳500', type: 'FIXED' as const, value: toPoisha(50), minOrderAmount: toPoisha(500), perUserLimit: 3, scope: 'STORE' as const, sellerId: shopId('deshi-bazar'), ...window }]
+        : []),
+      ...(house
+        ? [{ code: 'OFFICIALSHIP', description: 'Free delivery on MarketBD Official items', type: 'FREE_SHIPPING' as const, value: 0, perUserLimit: 5, scope: 'STORE' as const, sellerId: house, ...window }]
+        : []),
+    ],
+  });
+
+  console.log(`✓ 2 campaigns, 1 flash sale (${flashVariants.length} items), 6 banners, 8 quick links, 8 vouchers`);
 }
 
 async function main() {

@@ -7,6 +7,7 @@ import type {
   CategoryNode,
   CategoryRef,
   CouponView,
+  MyVoucherView,
   FlashSaleView,
   ProductCard,
   ProductDetail,
@@ -123,10 +124,25 @@ export const catalogApi = baseApi.injectEndpoints({
       transformResponse: unwrap<CampaignView>,
       providesTags: ['Campaigns'],
     }),
-    availableCoupons: b.query<CouponView[], void>({
+    /**
+     * Running vouchers. Pass the viewer's user id (or nothing for guests) so the "collected"
+     * flags are cached per viewer and refetch after sign-in.
+     */
+    availableCoupons: b.query<CouponView[], string | void>({
       query: () => '/coupons/available',
       transformResponse: unwrap<CouponView[]>,
       providesTags: ['Coupons'],
+    }),
+    /** The signed-in customer's collected vouchers. */
+    myVouchers: b.query<MyVoucherView[], void>({
+      query: () => '/coupons/mine',
+      transformResponse: unwrap<MyVoucherView[]>,
+      providesTags: ['Coupons'],
+    }),
+    collectCoupon: b.mutation<CouponView, string>({
+      query: (id) => ({ url: `/coupons/${id}/collect`, method: 'POST' }),
+      transformResponse: unwrap<CouponView>,
+      invalidatesTags: ['Coupons'],
     }),
   }),
 });
@@ -150,4 +166,6 @@ export const {
   useCampaignsQuery,
   useCampaignQuery,
   useAvailableCouponsQuery,
+  useMyVouchersQuery,
+  useCollectCouponMutation,
 } = catalogApi;

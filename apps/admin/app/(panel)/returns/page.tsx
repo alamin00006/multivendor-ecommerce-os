@@ -41,7 +41,7 @@ export default function AdminReturnsPage() {
             {data?.items.map((r) => (
               <tr key={r.id}>
                 <td className="px-4 py-3"><Link href={`/orders/${r.orderId}`} className="font-medium text-primary-700">{r.orderNumber}</Link></td>
-                <td className="max-w-xs px-4 py-3 text-xs">{r.reason}</td>
+                <td className="max-w-xs px-4 py-3 text-xs">{r.reason}{r.sellerNote && <p className="mt-1 text-ink-500">Shop: {r.sellerNote}</p>}</td>
                 <td className="px-4 py-3"><Badge>{r.status}</Badge></td>
                 <td className="px-4 py-3 text-xs text-ink-500">{fmtDate(r.createdAt)}</td>
                 <td className="px-4 py-3">

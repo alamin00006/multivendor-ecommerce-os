@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import type { BulkStockResult } from '@marketbd/shared';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   LOW_STOCK_THRESHOLD,
@@ -12,7 +13,7 @@ import {
 } from '@marketbd/shared';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { PaginatedResult, skipTake } from '../../common/pagination.js';
-import { randomSuffix, slugify } from '../../common/utils.js';
+import { randomSuffix, slugify, variantLabel } from '../../common/utils.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { managedProductInclude, toManagedProduct } from './product.mapper.js';
 
@@ -223,4 +224,65 @@ export class ProductManageService {
     await this.prisma.product.delete({ where: { id } });
     return { deleted: true };
   }
+
+  /** Every variant of the shop as a flat sheet (the template for bulk price / stock updates). */
+  async stockSheet(scope: ProductScope) {
+    const rows = await this.prisma.productVariant.findMany({
+      where: { product: { ...this.scopeWhere(scope), status: { not: 'REJECTED' } } },
+      include: { product: { select: { title: true } } },
+      orderBy: [{ product: { title: 'asc' } }, { sku: 'asc' }],
+    });
+    return rows.map((v) => ({ sku: v.sku, title: v.product.title, variant: variantLabel(v.attributes), price: v.price, stock: v.stock }));
+  }
+
+  /**
+   * Updates price and/or stock by SKU. Rows that fail are reported, the rest are saved.
+   * A new price at or above the "compare at" price ends that discount.
+   */
+  async bulkStock(scope: ProductScope, rows: Array<{ sku: string; price?: number; stock?: number }>): Promise<BulkStockResult> {
+    const skus = [...new Set(rows.map((r) => r.sku.trim().toUpperCase()))];
+    const variants = await this.prisma.productVariant.findMany({
+      where: { sku: { in: skus }, product: this.scopeWhere(scope) },
+      select: { id: true, sku: true, productId: true, compareAtPrice: true },
+    });
+    const bySku = new Map(variants.map((v) => [v.sku.toUpperCase(), v]));
+    const errors: BulkStockResult['errors'] = [];
+    const seen = new Set<string>();
+    const touched = new Set<string>();
+    let updated = 0;
+    await this.prisma.$transaction(async (tx) => {
+      for (const [i, row] of rows.entries()) {
+        const sku = row.sku.trim().toUpperCase();
+        const v = bySku.get(sku);
+        if (!v) {
+          errors.push({ row: i + 1, sku: row.sku, message: 'SKU not found in your shop' });
+          continue;
+        }
+        if (seen.has(sku)) {
+          errors.push({ row: i + 1, sku: row.sku, message: 'SKU appears more than once' });
+          continue;
+        }
+        seen.add(sku);
+        if (row.price === undefined && row.stock === undefined) {
+          errors.push({ row: i + 1, sku: row.sku, message: 'Nothing to update (price and stock are empty)' });
+          continue;
+        }
+        await tx.productVariant.update({
+          where: { id: v.id },
+          data: {
+            ...(row.price !== undefined ? { price: row.price, ...(v.compareAtPrice !== null && v.compareAtPrice <= row.price ? { compareAtPrice: null } : {}) } : {}),
+            ...(row.stock !== undefined ? { stock: row.stock } : {}),
+          },
+        });
+        if (row.price !== undefined) touched.add(v.productId);
+        updated += 1;
+      }
+      for (const productId of touched) {
+        const all = await tx.productVariant.findMany({ where: { productId }, select: { price: true, isActive: true } });
+        await tx.product.update({ where: { id: productId }, data: { minPrice: minActivePrice(all) } });
+      }
+    });
+    return { updated, errors };
+  }
+
 }

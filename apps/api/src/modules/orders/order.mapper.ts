@@ -58,6 +58,7 @@ export const orderSummaryInclude = {
   items: { select: { imageUrl: true, quantity: true }, take: 4 },
   _count: { select: { items: true } },
   user: { select: { id: true, name: true, phone: true } },
+  subOrders: { orderBy: { createdAt: 'asc' }, select: { seller: { select: { shopName: true } } } },
 } satisfies Prisma.OrderInclude;
 
 type OrderSummaryRow = Prisma.OrderGetPayload<{ include: typeof orderSummaryInclude }>;
@@ -68,9 +69,11 @@ export const toOrderSummary = (o: OrderSummaryRow, withCustomer = false): OrderS
   status: o.status,
   paymentMethod: o.paymentMethod,
   paymentStatus: o.paymentStatus,
+  channel: o.channel,
   total: o.total,
   itemCount: o._count.items,
   previewImages: o.items.map((i) => i.imageUrl).filter((u): u is string => Boolean(u)),
+  shopNames: o.subOrders.map((s) => s.seller.shopName),
   ...(withCustomer ? { customer: o.user } : {}),
   createdAt: o.createdAt.toISOString(),
 });
@@ -101,6 +104,8 @@ export const deliveredAt = (o: OrderDetailRow): Date | null => {
 
 /** returnDays comes from Admin → Settings (PlatformSetting.returnDays). */
 export const canReturnOrder = (o: OrderDetailRow, returnDays: number, now = new Date()): boolean => {
+  // Counter sales are returned at the counter, not online.
+  if (o.channel === 'POS') return false;
   if (!o.subOrders.some((s) => s.status === 'DELIVERED')) return false;
   if (o.returns.some((r) => r.status === 'REQUESTED' || r.status === 'APPROVED')) return false;
   const at = deliveredAt(o);
@@ -158,6 +163,7 @@ export const toOrderDetail = (
     imageUrls: r.imageUrls,
     status: r.status,
     adminNote: r.adminNote,
+    sellerNote: r.sellerNote,
     createdAt: r.createdAt.toISOString(),
   })),
   canCancel:
@@ -166,6 +172,7 @@ export const toOrderDetail = (
   canReturn: canReturnOrder(o, returnDays),
   canPay:
     o.paymentMethod !== 'COD' &&
+    o.paymentMethod !== 'CASH' &&
     o.status === 'PENDING' &&
     (o.paymentStatus === 'UNPAID' || o.paymentStatus === 'PENDING' || o.paymentStatus === 'FAILED'),
 });

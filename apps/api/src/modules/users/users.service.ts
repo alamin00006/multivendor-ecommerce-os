@@ -18,7 +18,13 @@ export class UsersService {
   }
 
   async updateProfile(userId: string, input: UpdateProfileInput): Promise<AuthUser> {
-    const user = await this.prisma.user.update({ where: { id: userId }, data: input, include: authUserInclude });
+    const { birthday, ...rest } = input;
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      // Stored as a DATE column: midnight UTC keeps the calendar day stable.
+      data: { ...rest, ...(birthday !== undefined ? { birthday: birthday ? new Date(`${birthday}T00:00:00Z`) : null } : {}) },
+      include: authUserInclude,
+    });
     return toAuthUser(user);
   }
 

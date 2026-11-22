@@ -1,6 +1,9 @@
-import { Star } from 'lucide-react-native';
+import { useCartCount } from '@marketbd/api-client';
+import { router } from 'expo-router';
+import { Check, ChevronLeft, ShoppingCart, Star } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '@/i18n';
 
 export const colors = {
@@ -145,6 +148,86 @@ export function Stepper({ value, max, onChange }: { value: number; max: number; 
       <Pressable className="h-full w-9 items-center justify-center" disabled={value >= max} onPress={() => onChange(value + 1)} accessibilityLabel="Increase">
         <Text className="text-lg text-ink-600">+</Text>
       </Pressable>
+    </View>
+  );
+}
+
+export function Checkbox({ checked, onPress, disabled, label }: { checked: boolean; onPress: () => void; disabled?: boolean; label?: string }) {
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked, disabled }}
+      accessibilityLabel={label}
+      hitSlop={8}
+      disabled={disabled}
+      onPress={onPress}
+      className={`size-5 items-center justify-center rounded border-2 ${checked ? 'border-primary-700 bg-primary-700' : 'border-ink-300 bg-white'} ${disabled ? 'opacity-40' : ''}`}
+    >
+      {checked ? <Check size={13} color="#fff" strokeWidth={3} /> : null}
+    </Pressable>
+  );
+}
+
+export function RadioDot({ checked }: { checked: boolean }) {
+  return (
+    <View className={`size-5 items-center justify-center rounded-full border-2 ${checked ? 'border-primary-700' : 'border-ink-300'}`}>
+      {checked ? <View className="size-2.5 rounded-full bg-primary-700" /> : null}
+    </View>
+  );
+}
+
+/** Rating pill used on cards and section headers: "4.8 ★ | 56". */
+export function RatingPill({ value, count }: { value: number; count?: number }) {
+  return (
+    <View className="flex-row items-center overflow-hidden rounded">
+      <View className="flex-row items-center gap-0.5 bg-warning px-1.5 py-0.5">
+        <Text className="text-[11px] font-bold text-white">{value.toFixed(1)}</Text>
+        <Star size={9} color="#fff" fill="#fff" />
+      </View>
+      {count !== undefined ? (
+        <View className="bg-ink-100 px-1.5 py-0.5">
+          <Text className="text-[11px] text-ink-700">{count}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** Cart icon with a quantity badge; opens the cart tab. */
+export function CartIconButton() {
+  const count = useCartCount();
+  return (
+    <Pressable onPress={() => router.push('/cart')} accessibilityLabel="Cart" className="size-10 items-center justify-center rounded-lg bg-white/70">
+      <ShoppingCart size={22} color={colors.ink} />
+      {count > 0 ? (
+        <View className="absolute right-0.5 top-0.5 min-w-4 items-center rounded-full bg-accent-500 px-1">
+          <Text className="text-[10px] font-bold text-white">{count > 99 ? '99+' : count}</Text>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
+/**
+ * Light header for inner screens: back arrow, then either a title or custom content (e.g. a search box),
+ * and optional right-side actions. Replaces the native stack header so screens match the app design.
+ */
+export function ScreenHeader({ title, subtitle, children, right, back = true }: { title?: string; subtitle?: string; children?: ReactNode; right?: ReactNode; back?: boolean }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View className="flex-row items-center gap-2 bg-primary-50 px-3 pb-3" style={{ paddingTop: insets.top + 8 }}>
+      {back ? (
+        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} accessibilityLabel="Back" hitSlop={10} className="size-9 items-center justify-center">
+          <ChevronLeft size={26} color={colors.ink} />
+        </Pressable>
+      ) : null}
+      {children ?? (
+        <View className="flex-1 flex-row items-baseline gap-1.5">
+          <Text numberOfLines={1} className="text-xl font-bold text-ink-900">{title}</Text>
+          {subtitle ? <Text className="text-sm text-ink-500">{subtitle}</Text> : null}
+        </View>
+      )}
+      {right}
     </View>
   );
 }

@@ -19,8 +19,10 @@ describe('Settings, product content, Q&A and bought-together (e2e)', () => {
 
   const sellerProduct = (slug: string) =>
     ctx.prisma.product.findFirstOrThrow({
-      where: { status: 'ACTIVE', seller: { slug } },
+      // A fixed order: without it Postgres may return a different row after updates (reviews, sold counts).
+      where: { status: 'ACTIVE', seller: { slug }, variants: { some: { isActive: true, stock: { gte: 5 }, flashSaleItems: { none: {} } } } },
       include: { variants: { where: { isActive: true, stock: { gte: 5 }, flashSaleItems: { none: {} } } } },
+      orderBy: { slug: 'asc' },
     });
 
   beforeAll(async () => {
@@ -61,6 +63,13 @@ describe('Settings, product content, Q&A and bought-together (e2e)', () => {
 
     await ctx.http().patch(`${API}/admin/settings`).set(auth(customer)).send({ returnDays: 1 }).expect(403);
     await ctx.http().patch(`${API}/admin/settings`).set(auth(admin)).send({ supportEmail: 'not-an-email' }).expect(400);
+
+    // Brand colours: hex only, lower-cased, served publicly; reset to the defaults afterwards.
+    await ctx.http().patch(`${API}/admin/settings`).set(auth(admin)).send({ brandPrimary: 'purple' }).expect(400);
+    await ctx.http().patch(`${API}/admin/settings`).set(auth(admin)).send({ brandPrimary: '#6D28D9', brandAccent: '#f59e0b' }).expect(200);
+    const themed = (await ctx.http().get(`${API}/settings/public`).expect(200)).body as Envelope<{ theme: { primary: string; accent: string } }>;
+    expect(themed.data.theme).toEqual({ primary: '#6d28d9', accent: '#f59e0b' });
+    await ctx.http().patch(`${API}/admin/settings`).set(auth(admin)).send({ brandPrimary: '#08755a', brandAccent: '#f55a36' }).expect(200);
   });
 
   it('records products bought in the same order as "frequently bought together"', async () => {

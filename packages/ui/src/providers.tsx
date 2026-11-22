@@ -8,12 +8,14 @@ import {
   type GuestCartItem,
   makeStore,
   restoreSession,
+  useChatRealtime,
   useGuestCartMerge,
 } from '@marketbd/api-client';
 import { LOCALE_COOKIE, type UiLocale } from '@marketbd/shared';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Provider, useDispatch } from 'react-redux';
 import { Toaster } from 'sonner';
+import { BrandThemeSync } from './brand-theme';
 import { I18nProvider } from './i18n';
 
 const GUEST_CART_KEY = 'mbd_guest_cart';
@@ -35,6 +37,11 @@ function SessionBootstrap({ guestCart }: { guestCart: boolean }) {
     void dispatch(restoreSession());
   }, [dispatch]);
   return guestCart ? <GuestCartMerge /> : null;
+}
+
+function ChatRealtime({ origin }: { origin: string }) {
+  useChatRealtime(origin);
+  return null;
 }
 
 function GuestCartMerge() {
@@ -74,10 +81,13 @@ function usePersistedGuestCart(store: AppStore, enabled: boolean) {
 export function AppProviders({
   locale,
   guestCart = false,
+  chatOrigin,
   children,
 }: {
   locale: UiLocale;
   guestCart?: boolean;
+  /** API origin for the chat Socket.IO channel (Next rewrites do not proxy WebSockets). */
+  chatOrigin?: string;
   children: ReactNode;
 }) {
   const [store] = useState<AppStore>(() => makeStore());
@@ -86,6 +96,8 @@ export function AppProviders({
     <I18nProvider locale={locale}>
       <Provider store={store}>
         <SessionBootstrap guestCart={guestCart} />
+        <BrandThemeSync />
+        {chatOrigin ? <ChatRealtime origin={chatOrigin} /> : null}
         {children}
         <Toaster position="top-center" richColors closeButton />
       </Provider>

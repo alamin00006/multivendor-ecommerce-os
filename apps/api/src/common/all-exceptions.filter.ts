@@ -15,6 +15,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger('ExceptionFilter');
 
   catch(exception: unknown, host: ArgumentsHost): void {
+    // Socket.IO handlers have no HTTP response to write to; log and drop the event.
+    if (host.getType() !== 'http') {
+      this.logger.warn(`WebSocket handler error: ${exception instanceof Error ? exception.message : String(exception)}`);
+      return;
+    }
     const response = host.switchToHttp().getResponse<Response>();
     if (response.headersSent) return;
     const body = this.toBody(exception);

@@ -5,3 +5,5 @@ export * from './catalog.js';
 export * from './commerce.js';
 export * from './merchandising.js';
 export * from './platform.js';
+export * from './chat.js';
+export * from './seller-business.js';

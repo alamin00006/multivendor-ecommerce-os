@@ -1,15 +1,17 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { ModerateReviewSchema, PaginationQuerySchema, ReviewListQuerySchema, ReviewSchema } from '@marketbd/shared';
+import { ModerateReviewSchema, PaginationQuerySchema, ReviewListQuerySchema, ReviewReplySchema, ReviewSchema, SellerReviewQuerySchema } from '@marketbd/shared';
 import { createZodDto } from 'nestjs-zod';
 import type { AuthUserContext } from '../../common/auth-user.js';
-import { CurrentUser, Public, ResponseMessage, Roles } from '../../common/decorators.js';
+import { CurrentUser, Public, RequireMultiVendor, ResponseMessage, Roles } from '../../common/decorators.js';
 import { ReviewsService } from './reviews.service.js';
 
 class ReviewDto extends createZodDto(ReviewSchema) {}
 class ReviewListQueryDto extends createZodDto(ReviewListQuerySchema) {}
 class ModerateReviewDto extends createZodDto(ModerateReviewSchema) {}
 class PageQueryDto extends createZodDto(PaginationQuerySchema) {}
+class ReviewReplyDto extends createZodDto(ReviewReplySchema) {}
+class SellerReviewQueryDto extends createZodDto(SellerReviewQuerySchema) {}
 
 @ApiTags('reviews')
 @Controller()
@@ -26,6 +28,19 @@ export class ReviewsController {
   @Get('products/:id/reviews/summary')
   summary(@Param('id') id: string) {
     return this.reviews.summary(id);
+  }
+
+  @ApiBearerAuth()
+  @Get('reviews/mine')
+  mine(@CurrentUser() user: AuthUserContext, @Query() query: PageQueryDto) {
+    return this.reviews.mine(user.id, query);
+  }
+
+  /** Delivered purchases still waiting for a review. */
+  @ApiBearerAuth()
+  @Get('reviews/pending')
+  pending(@CurrentUser() user: AuthUserContext) {
+    return this.reviews.pending(user.id);
   }
 
   @ApiBearerAuth()
@@ -52,5 +67,36 @@ export class AdminReviewsController {
   @ResponseMessage('Review updated')
   moderate(@Param('id') id: string, @Body() dto: ModerateReviewDto) {
     return this.reviews.moderate(id, dto.isVisible);
+  }
+}
+
+@ApiTags('seller')
+@ApiBearerAuth()
+@Roles('SELLER')
+@RequireMultiVendor()
+@Controller('seller/reviews')
+export class SellerReviewsController {
+  constructor(private readonly reviews: ReviewsService) {}
+
+  @Get()
+  list(@CurrentUser() user: AuthUserContext, @Query() query: SellerReviewQueryDto) {
+    return this.reviews.sellerList(user.id, query);
+  }
+
+  @Get('stats')
+  stats(@CurrentUser() user: AuthUserContext) {
+    return this.reviews.sellerStats(user.id);
+  }
+
+  @Put(':id/reply')
+  @ResponseMessage('Reply posted')
+  reply(@CurrentUser() user: AuthUserContext, @Param('id') id: string, @Body() dto: ReviewReplyDto) {
+    return this.reviews.reply(user.id, id, dto.reply);
+  }
+
+  @Delete(':id/reply')
+  @ResponseMessage('Reply removed')
+  removeReply(@CurrentUser() user: AuthUserContext, @Param('id') id: string) {
+    return this.reviews.reply(user.id, id, null);
   }
 }

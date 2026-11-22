@@ -48,6 +48,14 @@ enum PaymentMethod {
   COD
   BKASH
   SSLCOMMERZ
+  /// Paid in cash at the store counter (POS).
+  CASH
+}
+
+/// Where an order was taken.
+enum OrderChannel {
+  ONLINE
+  POS
 }
 
 enum PaymentStatus {
@@ -67,6 +75,18 @@ enum ShippingZone {
 enum CouponType {
   PERCENTAGE
   FIXED
+  /// Discount on the delivery fee; `value` caps it (0 = the whole fee).
+  FREE_SHIPPING
+}
+
+/// Who funds the voucher and where it applies.
+enum CouponScope {
+  /// Whole order, funded by the platform.
+  PLATFORM
+  /// One shop's items, funded by that seller.
+  STORE
+  /// Whole order, only when paid with `paymentMethod`.
+  PAYMENT
 }
 
 enum CampaignType {
@@ -111,12 +131,36 @@ enum RefundStatus {
   FAILED
 }
 
+enum PayoutStatus {
+  REQUESTED
+  PAID
+  REJECTED
+}
+
+enum PayoutMethod {
+  BKASH
+  NAGAD
+  BANK
+}
+
 enum NotificationType {
   ORDER
   PAYMENT
   PROMO
   SYSTEM
   SELLER
+  CHAT
+}
+
+enum ChatSide {
+  CUSTOMER
+  SELLER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
 }
 
 enum Locale {
@@ -149,6 +193,9 @@ model PlatformSetting {
   supportEmail         String   @default("support@marketbd.example")
   supportHours         String   @default("9 am – 9 pm (Everyday)")
   socialLinks          Json     @default("{}")
+  /// Brand colours (hex): primary = shade 700, accent = shade 500.
+  brandPrimary         String   @default("#08755a")
+  brandAccent          String   @default("#f55a36")
   updatedById          String?
   updatedAt            DateTime @updatedAt
 }
@@ -164,6 +211,9 @@ model User {
   avatarUrl       String?
   role            Role      @default(CUSTOMER)
   locale          Locale    @default(EN)
+  /// Date only (no time zone shifts).
+  birthday        DateTime? @db.Date
+  gender          Gender?
   isActive        Boolean   @default(true)
   emailVerifiedAt DateTime?
   phoneVerifiedAt DateTime?
@@ -179,8 +229,11 @@ model User {
   reviews           Review[]
   questions         ProductQuestion[]  @relation("QuestionAsker")
   answers           ProductQuestion[]  @relation("QuestionAnswerer")
+  conversations     Conversation[]     @relation("ChatCustomer")
+  chatMessages      ChatMessage[]      @relation("ChatSender")
   notifications     Notification[]
   couponRedemptions CouponRedemption[]
+  couponCollections CouponCollection[]
 
   @@index([role, createdAt])
 }
@@ -274,27 +327,57 @@ model Address {
 // ───────── Sellers ─────────
 
 model SellerProfile {
-  id             String       @id @default(cuid())
-  userId         String       @unique
+  id             String         @id @default(cuid())
+  userId         String         @unique
   shopName       String
-  slug           String       @unique
+  slug           String         @unique
   logoUrl        String?
   bannerUrl      String?
   description    String?
   phone          String?
   pickupAddress  String?
-  status         SellerStatus @default(PENDING)
-  isHouseStore   Boolean      @default(false)
-  commissionRate Decimal      @default(10) @db.Decimal(5, 2)
-  ratingAvg      Decimal      @default(0) @db.Decimal(2, 1)
+  status         SellerStatus   @default(PENDING)
+  isHouseStore   Boolean        @default(false)
+  commissionRate Decimal        @default(10) @db.Decimal(5, 2)
+  ratingAvg      Decimal        @default(0) @db.Decimal(2, 1)
   approvedAt     DateTime?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  user           User         @relation(fields: [userId], references: [id])
+  /// Where payouts go: { method, accountName, accountNumber, bankName?, branch? }
+  payoutAccount  Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  user           User           @relation(fields: [userId], references: [id])
   products       Product[]
   subOrders      SubOrder[]
+  conversations  Conversation[]
+  coupons        Coupon[]
+  payouts        Payout[]
 
   @@index([status])
+}
+
+/// Money paid out to a seller from their cleared earnings.
+model Payout {
+  id            String        @id @default(cuid())
+  sellerId      String
+  amount        Int
+  status        PayoutStatus  @default(REQUESTED)
+  method        PayoutMethod
+  accountName   String
+  accountNumber String
+  bankName      String?
+  branch        String?
+  sellerNote    String?
+  adminNote     String?
+  /// Transaction id / bank reference entered by admin when paid.
+  reference     String?
+  processedById String?
+  processedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  seller        SellerProfile @relation(fields: [sellerId], references: [id])
+
+  @@index([sellerId, createdAt])
+  @@index([status, createdAt])
 }
 
 // ───────── Catalog ─────────
@@ -361,6 +444,7 @@ model Product {
   images         ProductImage[]
   reviews        Review[]
   questions      ProductQuestion[]
+  chatMessages   ChatMessage[]
   wishlistedBy   Wishlist[]
   campaigns      CampaignProduct[]
   orderItems     OrderItem[]
@@ -450,6 +534,7 @@ model Order {
   status          OrderStatus          @default(PENDING)
   paymentMethod   PaymentMethod
   paymentStatus   PaymentStatus        @default(UNPAID)
+  channel         OrderChannel         @default(ONLINE)
   shippingZone    ShippingZone
   shippingAddress Json
   subtotal        Int
@@ -472,6 +557,7 @@ model Order {
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
+  @@index([channel, createdAt])
 }
 
 model SubOrder {
@@ -546,6 +632,7 @@ model ReturnRequest {
   imageUrls  String[]
   status     ReturnStatus @default(REQUESTED)
   adminNote  String?
+  sellerNote String?
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
   order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -601,6 +688,8 @@ model Review {
   comment            String?
   isVerifiedPurchase Boolean       @default(false)
   isVisible          Boolean       @default(true)
+  sellerReply        String?
+  sellerRepliedAt    DateTime?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   product            Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -635,10 +724,32 @@ model Coupon {
   startsAt       DateTime
   endsAt         DateTime
   isActive       Boolean            @default(true)
+  scope          CouponScope        @default(PLATFORM)
+  /// Set for STORE vouchers.
+  sellerId       String?
+  /// Set for PAYMENT vouchers.
+  paymentMethod  PaymentMethod?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
+  seller         SellerProfile?     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   orders         Order[]
   redemptions    CouponRedemption[]
+  collections    CouponCollection[]
+
+  @@index([isActive, endsAt])
+  @@index([sellerId])
+}
+
+/// A voucher saved to a customer's wallet ("Collect").
+model CouponCollection {
+  userId    String
+  couponId  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@id([userId, couponId])
+  @@index([couponId])
 }
 
 model CouponRedemption {
@@ -780,4 +891,44 @@ model ProductQuestion {
 
   @@index([productId, isVisible, createdAt])
   @@index([answeredAt])
+}
+
+// ───────── Customer ↔ seller chat ─────────
+
+/// One thread per customer and shop. Unread counters and read pointers are kept per side.
+model Conversation {
+  id                 String        @id @default(cuid())
+  customerId         String
+  sellerId           String
+  lastMessageAt      DateTime      @default(now())
+  lastMessagePreview String        @default("")
+  lastMessageSide    ChatSide?
+  customerUnread     Int           @default(0)
+  sellerUnread       Int           @default(0)
+  customerLastReadAt DateTime?
+  sellerLastReadAt   DateTime?
+  createdAt          DateTime      @default(now())
+  customer           User          @relation("ChatCustomer", fields: [customerId], references: [id], onDelete: Cascade)
+  seller             SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  messages           ChatMessage[]
+
+  @@unique([customerId, sellerId])
+  @@index([customerId, lastMessageAt])
+  @@index([sellerId, lastMessageAt])
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  side           ChatSide
+  body           String
+  /// Product the message is about (shared from a product page).
+  productId      String?
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation("ChatSender", fields: [senderId], references: [id], onDelete: Cascade)
+  product        Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
 }

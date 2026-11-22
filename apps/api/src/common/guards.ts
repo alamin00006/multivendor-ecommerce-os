@@ -32,6 +32,8 @@ export class JwtAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Socket.IO gateways authenticate on connect; these guards only apply to HTTP routes.
+    if (context.getType() !== 'http') return true;
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -60,6 +62,8 @@ export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
+    // Socket.IO gateways authenticate on connect; these guards only apply to HTTP routes.
+    if (context.getType() !== 'http') return true;
     const roles = this.reflector.getAllAndOverride<Role[] | undefined>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -81,6 +85,8 @@ export class MultiVendorGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Socket.IO gateways authenticate on connect; these guards only apply to HTTP routes.
+    if (context.getType() !== 'http') return true;
     const required = this.reflector.getAllAndOverride<boolean>(REQUIRE_MULTI_VENDOR_KEY, [
       context.getHandler(),
       context.getClass(),

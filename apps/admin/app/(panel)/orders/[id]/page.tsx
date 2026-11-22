@@ -33,8 +33,14 @@ export default function AdminOrderPage() {
         description={`${order.customer?.name ?? ''} · ${fmtDate(order.createdAt)}`}
         actions={
           <>
+            {order.channel === 'POS' && <Badge tone="accent">POS counter sale</Badge>}
             <PaymentStatusBadge status={order.paymentStatus} />
             <OrderStatusBadge status={order.status} />
+            {order.channel === 'POS' && (
+              <a href={`/receipt/${order.id}`} target="_blank" rel="noopener" className="inline-flex h-8 items-center rounded-md border border-ink-200 px-3 text-xs font-semibold hover:bg-ink-50">
+                Receipt
+              </a>
+            )}
             <select className="input h-9 w-auto" value="" onChange={(e) => e.target.value && setTarget({ status: e.target.value as OrderStatus })}>
               <option value="">Override status…</option>
               {ORDER_STATUSES.filter((s) => s !== order.status).map((s) => (

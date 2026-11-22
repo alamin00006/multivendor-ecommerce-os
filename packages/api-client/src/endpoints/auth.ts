@@ -36,13 +36,13 @@ export const authApi = baseApi.injectEndpoints({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
       transformResponse: unwrap<AuthResult>,
       onQueryStarted: (_, { queryFulfilled, dispatch }) => startSession(queryFulfilled, dispatch),
-      invalidatesTags: ['Me', 'Cart', 'Wishlist', 'Orders', 'Addresses', 'Notifications'],
+      invalidatesTags: ['Me', 'Cart', 'Wishlist', 'Orders', 'Addresses', 'Notifications', 'Coupons'],
     }),
     login: b.mutation<AuthResult, LoginInput>({
       query: (body) => ({ url: '/auth/login', method: 'POST', body }),
       transformResponse: unwrap<AuthResult>,
       onQueryStarted: (_, { queryFulfilled, dispatch }) => startSession(queryFulfilled, dispatch),
-      invalidatesTags: ['Me', 'Cart', 'Wishlist', 'Orders', 'Addresses', 'Notifications'],
+      invalidatesTags: ['Me', 'Cart', 'Wishlist', 'Orders', 'Addresses', 'Notifications', 'Coupons'],
     }),
     requestOtp: b.mutation<OtpRequestResult, OtpRequestInput>({
       query: (body) => ({ url: '/auth/otp/request', method: 'POST', body }),
@@ -52,7 +52,7 @@ export const authApi = baseApi.injectEndpoints({
       query: (body) => ({ url: '/auth/otp/verify', method: 'POST', body }),
       transformResponse: unwrap<AuthResult>,
       onQueryStarted: (_, { queryFulfilled, dispatch }) => startSession(queryFulfilled, dispatch),
-      invalidatesTags: ['Me', 'Cart', 'Wishlist', 'Orders', 'Addresses', 'Notifications'],
+      invalidatesTags: ['Me', 'Cart', 'Wishlist', 'Orders', 'Addresses', 'Notifications', 'Coupons'],
     }),
     logout: b.mutation<null, void>({
       queryFn: async (_arg, api, _extra, baseQuery) => {
@@ -81,6 +81,11 @@ export const authApi = baseApi.injectEndpoints({
       query: (body) => ({ url: '/users/me', method: 'PATCH', body }),
       transformResponse: unwrap<AuthUser>,
       invalidatesTags: ['Me'],
+      // The signed-in user lives in the auth slice (header, account pages), so update it right away.
+      async onQueryStarted(_body, { dispatch, queryFulfilled }) {
+        const { data } = await queryFulfilled;
+        dispatch(userUpdated(data));
+      },
     }),
     changePassword: b.mutation<null, ChangePasswordInput>({
       query: (body) => ({ url: '/users/me/password', method: 'POST', body }),

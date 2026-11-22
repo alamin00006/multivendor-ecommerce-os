@@ -1,10 +1,14 @@
 import type { z } from 'zod';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BRAND, CUSTOMER_CANCELLABLE_STATUSES } from '@marketbd/shared';
 import type {
+  SellerReturnUpdateInput,
+  SellerReturnView,
   CancelOrderInput,
   OrderDetail,
   OrderListQuerySchema,
   OrderStatus,
+  ReturnableOrder,
   ReturnRequestPayload,
   SellerOrderView,
   UpdateOrderStatusInput,
@@ -20,7 +24,9 @@ import { PlatformModeService } from '../platform/platform-mode.service.js';
 import { SettingsService } from '../platform/settings.service.js';
 import { SellerAccessService } from '../sellers/seller-access.service.js';
 import {
+  asShippingAddress,
   canReturnOrder,
+  deliveredAt,
   orderDetailInclude,
   orderSummaryInclude,
   sellerOrderInclude,
@@ -47,6 +53,18 @@ export class OrdersService {
     return {
       ...(query.status ? { status: query.status } : {}),
       ...(query.paymentStatus ? { paymentStatus: query.paymentStatus } : {}),
+      ...(query.channel ? { channel: query.channel } : {}),
+      // Same rule as `canPay` on the order: online method, still pending, not paid yet.
+      ...(query.toPay
+        ? { paymentMethod: { notIn: ['COD', 'CASH'] as ('COD' | 'CASH')[] }, status: 'PENDING' as const, paymentStatus: { in: ['UNPAID', 'PENDING', 'FAILED'] as ('UNPAID' | 'PENDING' | 'FAILED')[] } }
+        : {}),
+      // Same rule as `canCancel` on the order: not shipped anywhere yet.
+      ...(query.cancellable
+        ? {
+            status: { in: [...CUSTOMER_CANCELLABLE_STATUSES] },
+            subOrders: { every: { status: { in: [...CUSTOMER_CANCELLABLE_STATUSES, 'CANCELLED' as const] } } },
+          }
+        : {}),
       ...(query.q
         ? {
             OR: [
@@ -241,6 +259,91 @@ export class OrdersService {
     return this.getAny(id);
   }
 
+  /** The signed-in customer's return requests, newest first, with the package's shop and items. */
+  async listMyReturns(userId: string, query: { page: number; limit: number; status?: string }) {
+    const where: Prisma.ReturnRequestWhereInput = {
+      order: { userId },
+      ...(query.status ? { status: query.status as Prisma.ReturnRequestWhereInput['status'] } : {}),
+    };
+    const [rows, total, multiVendor] = await Promise.all([
+      this.prisma.returnRequest.findMany({
+        where,
+        include: {
+          order: { select: { id: true, orderNumber: true, total: true } },
+          subOrder: {
+            select: {
+              seller: { select: { shopName: true } },
+              items: { select: { title: true, imageUrl: true, quantity: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        ...skipTake(query.page, query.limit),
+      }),
+      this.prisma.returnRequest.count({ where }),
+      this.mode.isMultiVendor(),
+    ]);
+    return PaginatedResult.of(
+      rows.map((r) => ({
+        id: r.id,
+        orderId: r.order.id,
+        orderNumber: r.order.orderNumber,
+        orderTotal: r.order.total,
+        subOrderId: r.subOrderId,
+        reason: r.reason,
+        imageUrls: r.imageUrls,
+        status: r.status,
+        adminNote: r.adminNote,
+        sellerNote: r.sellerNote,
+        shopName: r.subOrder ? (multiVendor ? r.subOrder.seller.shopName : BRAND.name) : null,
+        items: r.subOrder?.items ?? [],
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
+      })),
+      query.page,
+      query.limit,
+      total,
+    );
+  }
+
+  /** Delivered orders still inside the return window, with the packages that can be sent back. */
+  async listReturnable(userId: string): Promise<ReturnableOrder[]> {
+    const [rows, returnDays, multiVendor] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { userId, subOrders: { some: { status: 'DELIVERED' } } },
+        include: orderDetailInclude,
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      this.settings.returnDays(),
+      this.mode.isMultiVendor(),
+    ]);
+    return rows
+      .filter((o) => canReturnOrder(o, returnDays))
+      .map((o) => {
+        const at = deliveredAt(o);
+        return {
+          orderId: o.id,
+          orderNumber: o.orderNumber,
+          deliveredAt: at?.toISOString() ?? null,
+          returnBy: at ? new Date(at.getTime() + returnDays * 86_400_000).toISOString() : null,
+          packages: o.subOrders
+            .filter((s) => s.status === 'DELIVERED')
+            .map((s) => ({
+              subOrderId: s.id,
+              shopName: multiVendor ? s.seller.shopName : BRAND.name,
+              items: s.items.map((i) => ({
+                title: i.title,
+                imageUrl: i.imageUrl,
+                variantLabel: i.variantLabel,
+                quantity: i.quantity,
+                lineTotal: i.lineTotal,
+              })),
+            })),
+        };
+      });
+  }
+
   async listReturns(query: { page: number; limit: number; status?: string }) {
     const where: Prisma.ReturnRequestWhereInput = query.status
       ? { status: query.status as Prisma.ReturnRequestWhereInput['status'] }
@@ -265,6 +368,7 @@ export class OrdersService {
         imageUrls: r.imageUrls,
         status: r.status,
         adminNote: r.adminNote,
+        sellerNote: r.sellerNote,
         createdAt: r.createdAt.toISOString(),
       })),
       query.page,
@@ -303,4 +407,93 @@ export class OrdersService {
     );
     return this.getAny(ret.orderId);
   }
+
+  // ───── Seller returns ─────
+
+  /** Returns on the seller's packages (whole-order returns are shown read-only). */
+  async listSellerReturns(userId: string, query: { page: number; limit: number; status?: string }) {
+    const seller = await this.access.requireActiveSeller(userId);
+    const where: Prisma.ReturnRequestWhereInput = {
+      OR: [{ subOrder: { sellerId: seller.id } }, { subOrderId: null, order: { subOrders: { some: { sellerId: seller.id } } } }],
+      ...(query.status ? { status: query.status as Prisma.ReturnRequestWhereInput['status'] } : {}),
+    };
+    const [rows, total] = await Promise.all([
+      this.prisma.returnRequest.findMany({
+        where,
+        include: {
+          order: { select: { id: true, orderNumber: true, shippingAddress: true, user: { select: { name: true, phone: true } } } },
+          subOrder: { select: { total: true, items: { select: { title: true, variantLabel: true, imageUrl: true, quantity: true, lineTotal: true } } } },
+        },
+        orderBy: { createdAt: 'desc' },
+        ...skipTake(query.page, query.limit),
+      }),
+      this.prisma.returnRequest.count({ where }),
+    ]);
+    return PaginatedResult.of(
+      rows.map<SellerReturnView>((r) => {
+        const address = asShippingAddress(r.order.shippingAddress);
+        return {
+          id: r.id,
+          orderId: r.order.id,
+          orderNumber: r.order.orderNumber,
+          subOrderId: r.subOrderId,
+          canAct: Boolean(r.subOrderId),
+          reason: r.reason,
+          imageUrls: r.imageUrls,
+          status: r.status,
+          adminNote: r.adminNote,
+          sellerNote: r.sellerNote,
+          customer: { name: address.fullName || r.order.user.name, phone: address.phone || r.order.user.phone },
+          items: r.subOrder?.items ?? [],
+          amount: r.subOrder?.total ?? 0,
+          createdAt: r.createdAt.toISOString(),
+          updatedAt: r.updatedAt.toISOString(),
+        };
+      }),
+      query.page,
+      query.limit,
+      total,
+    );
+  }
+
+  /**
+   * Seller decides on a return of their own package: approve or reject a new request, then mark the
+   * parcel received (which restocks it). Refunds stay with admin.
+   */
+  async sellerUpdateReturn(userId: string, returnId: string, input: SellerReturnUpdateInput) {
+    const seller = await this.access.requireActiveSeller(userId);
+    const ret = await this.prisma.returnRequest.findFirst({
+      where: { id: returnId, subOrder: { sellerId: seller.id } },
+      include: { order: true },
+    });
+    if (!ret || !ret.subOrderId) throw new NotFoundException('Return request not found');
+    const allowed: Record<string, string[]> = { REQUESTED: ['APPROVED', 'REJECTED'], APPROVED: ['RECEIVED', 'REJECTED'] };
+    if (!allowed[ret.status]?.includes(input.status)) {
+      throw new BadRequestException(`A ${ret.status.toLowerCase()} return cannot be marked ${input.status.toLowerCase()}`);
+    }
+    if (input.status === 'REJECTED' && !input.sellerNote) throw new BadRequestException('Tell the customer why the return is rejected');
+    const subOrderId = ret.subOrderId;
+    await this.prisma.$transaction(async (tx) => {
+      await tx.returnRequest.update({ where: { id: returnId }, data: { status: input.status, sellerNote: input.sellerNote ?? ret.sellerNote } });
+      const opts = { actor: 'system' as const, actorId: userId, note: input.sellerNote ?? `Return ${input.status.toLowerCase()} by the shop` };
+      if (input.status === 'REJECTED') await this.status.transitionSubOrder(tx, subOrderId, 'DELIVERED', opts);
+      if (input.status === 'RECEIVED') {
+        await this.status.transitionSubOrder(tx, subOrderId, 'RETURNED', opts);
+        await this.status.restock(tx, subOrderId);
+      }
+    });
+    const message: Record<string, string> = {
+      APPROVED: 'was approved. Please send the item back to the shop.',
+      REJECTED: `was rejected: ${input.sellerNote ?? ''}`,
+      RECEIVED: 'was received by the shop. Your refund will be processed shortly.',
+    };
+    await this.notifications.notify(ret.order.userId, 'ORDER', 'Return update', `Your return for order ${ret.order.orderNumber} ${message[input.status]}`, { orderId: ret.orderId });
+    if (input.status === 'RECEIVED') {
+      const admins = await this.prisma.user.findMany({ where: { role: 'ADMIN', isActive: true }, select: { id: true } });
+      for (const a of admins)
+        await this.notifications.notify(a.id, 'ORDER', 'Return ready for refund', `${seller.shopName} received the return for order ${ret.order.orderNumber}.`, { orderId: ret.orderId });
+    }
+    return (await this.listSellerReturns(userId, { page: 1, limit: 100 })).items.find((r) => r.id === returnId)!;
+  }
+
 }

@@ -1,6 +1,7 @@
 import { Controller, Get, Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { HttpThrottlerGuard } from './common/http-throttler.guard.js';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AllExceptionsFilter } from './common/all-exceptions.filter.js';
 import { Public } from './common/decorators.js';
@@ -19,11 +20,14 @@ import { ImagesModule } from './modules/images/images.module.js';
 import { MerchandisingModule } from './modules/merchandising/merchandising.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { OrdersModule } from './modules/orders/orders.module.js';
+import { PosModule } from './modules/pos/pos.module.js';
+import { PayoutsModule } from './modules/payouts/payouts.module.js';
 import { OrderStatusModule } from './modules/order-status/order-status.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
 import { PlatformModule } from './modules/platform/platform.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
 import { QuestionsModule } from './modules/questions/questions.module.js';
+import { ChatModule } from './modules/chat/chat.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
 import { SellersModule } from './modules/sellers/sellers.module.js';
 import { UploadsModule } from './modules/uploads/uploads.module.js';
@@ -60,8 +64,11 @@ class HealthController {
     OrderStatusModule,
     PaymentsModule,
     OrdersModule,
+    PosModule,
+    PayoutsModule,
     ReviewsModule,
     QuestionsModule,
+    ChatModule,
     CampaignsModule,
     MerchandisingModule,
     UploadsModule,
@@ -73,7 +80,7 @@ class HealthController {
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: HttpThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: MultiVendorGuard },

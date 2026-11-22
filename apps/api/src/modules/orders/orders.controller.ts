@@ -9,6 +9,7 @@ import {
   RefundSchema,
   ReturnRequestSchema,
   ReturnStatusSchema,
+  SellerReturnUpdateSchema,
   UpdateOrderStatusSchema,
   UpdateReturnSchema,
 } from '@marketbd/shared';
@@ -26,6 +27,7 @@ class ReturnRequestDto extends createZodDto(ReturnRequestSchema) {}
 class UpdateOrderStatusDto extends createZodDto(UpdateOrderStatusSchema) {}
 class RefundDto extends createZodDto(RefundSchema) {}
 class UpdateReturnDto extends createZodDto(UpdateReturnSchema) {}
+class SellerReturnUpdateDto extends createZodDto(SellerReturnUpdateSchema) {}
 class ReturnListQueryDto extends createZodDto(
   PaginationQuerySchema.extend({ status: ReturnStatusSchema.optional() }),
 ) {}
@@ -55,6 +57,17 @@ export class OrdersController {
     return this.orders.listMine(user.id, query);
   }
 
+  /** Delivered orders still inside the return window (declared before `orders/:id`). */
+  @Get('orders/returnable')
+  returnable(@CurrentUser() user: AuthUserContext) {
+    return this.orders.listReturnable(user.id);
+  }
+
+  @Get('returns')
+  myReturns(@CurrentUser() user: AuthUserContext, @Query() query: ReturnListQueryDto) {
+    return this.orders.listMyReturns(user.id, query);
+  }
+
   @Get('orders/:id')
   get(@CurrentUser() user: AuthUserContext, @Param('id') id: string) {
     return this.orders.getMine(user.id, id);
@@ -80,6 +93,17 @@ export class OrdersController {
 @Controller('seller/orders')
 export class SellerOrdersController {
   constructor(private readonly orders: OrdersService) {}
+
+  @Get('returns')
+  returns(@CurrentUser() user: AuthUserContext, @Query() query: ReturnListQueryDto) {
+    return this.orders.listSellerReturns(user.id, query);
+  }
+
+  @Patch('returns/:id')
+  @ResponseMessage('Return updated')
+  updateReturn(@CurrentUser() user: AuthUserContext, @Param('id') id: string, @Body() dto: SellerReturnUpdateDto) {
+    return this.orders.sellerUpdateReturn(user.id, id, dto);
+  }
 
   @Get()
   list(@CurrentUser() user: AuthUserContext, @Query() query: OrderListQueryDto) {

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AUTH } from '../constants.js';
-import { LocaleSchema } from '../enums.js';
+import { GenderSchema, LocaleSchema } from '../enums.js';
 import { BdPhoneSchema } from './common.js';
 
 export const EmailSchema = z.string().trim().toLowerCase().email('Enter a valid email address').max(254);
@@ -47,9 +47,23 @@ export const ChangePasswordSchema = z.object({
 });
 export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 
+/** Calendar date as YYYY-MM-DD; must be a real past date for someone at least 13 years old. */
+export const BirthdaySchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the format YYYY-MM-DD')
+  .refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v, 'Enter a valid date')
+  .refine((v) => v >= '1900-01-01', 'Enter a valid date')
+  .refine((v) => {
+    const limit = new Date();
+    limit.setUTCFullYear(limit.getUTCFullYear() - 13);
+    return v <= limit.toISOString().slice(0, 10);
+  }, 'You must be at least 13 years old');
+
 export const UpdateProfileSchema = z.object({
   name: NameSchema.optional(),
   avatarUrl: z.string().url().max(2048).nullable().optional(),
   locale: LocaleSchema.optional(),
+  birthday: BirthdaySchema.nullable().optional(),
+  gender: GenderSchema.nullable().optional(),
 });
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;

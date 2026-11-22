@@ -22,8 +22,8 @@ export default function SellerDashboardPage() {
         <StatCard label="To fulfil" value={String(data.pendingOrders)} icon={Clock} tone="accent" />
         <StatCard label="Products" value={String(data.productsCount)} icon={Package} tone="warning" />
       </div>
-      <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
-        <section className="card">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <section className="card min-w-0">
           <h3 className="border-b border-ink-100 px-4 py-3 font-semibold">Recent orders</h3>
           <Table head={['Order', 'Items', 'Total', 'Status', 'Date']}>
             {data.recentOrders.map((o) => (

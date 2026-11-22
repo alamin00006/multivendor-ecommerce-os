@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { BRAND, type PaymentClient, type PaymentInitResult, type PaymentMethod } from '@marketbd/shared';
+import { BRAND, type PaymentClient, type PaymentInitResult, type OnlinePaymentMethod, type PaymentMethod } from '@marketbd/shared';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { env } from '../../config/env.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -30,7 +30,7 @@ export class PaymentsService {
     return null;
   }
 
-  methods(): Array<{ method: PaymentMethod; enabled: boolean }> {
+  methods(): Array<{ method: OnlinePaymentMethod; enabled: boolean }> {
     return [
       { method: 'COD', enabled: true },
       { method: 'BKASH', enabled: this.bkash.enabled },

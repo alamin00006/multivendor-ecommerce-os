@@ -147,6 +147,7 @@ export const bn: Dictionary = {
       COD: 'ক্যাশ অন ডেলিভারি',
       BKASH: 'বিকাশ',
       SSLCOMMERZ: 'কার্ড / মোবাইল ব্যাংকিং (SSLCommerz)',
+      CASH: 'নগদ (দোকান কাউন্টার)',
     },
     unavailableMethod: 'বর্তমানে উপলব্ধ নয়',
     successTitle: 'ধন্যবাদ! আপনার অর্ডার সম্পন্ন হয়েছে।',

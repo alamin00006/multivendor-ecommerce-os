@@ -8,6 +8,7 @@ import {
   SearchSuggestQuerySchema,
   UpdateProductSchema,
   UpdateStockSchema,
+  BulkStockUpdateSchema,
 } from '@marketbd/shared';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
@@ -24,6 +25,7 @@ class ManageProductListQueryDto extends createZodDto(ManageProductListQuerySchem
 class ProductDto extends createZodDto(ProductSchema) {}
 class UpdateProductDto extends createZodDto(UpdateProductSchema) {}
 class UpdateStockDto extends createZodDto(UpdateStockSchema) {}
+class BulkStockDto extends createZodDto(BulkStockUpdateSchema) {}
 class ProductStatusDto extends createZodDto(z.object({ status: ProductStatusSchema })) {}
 
 @ApiTags('products')
@@ -81,6 +83,17 @@ export class SellerProductsController {
   @Get()
   async list(@CurrentUser() user: AuthUserContext, @Query() query: ManageProductListQueryDto) {
     return this.manage.list(await this.scope(user), query);
+  }
+
+  @Get('stock-sheet')
+  async stockSheet(@CurrentUser() user: AuthUserContext) {
+    return this.manage.stockSheet(await this.scope(user));
+  }
+
+  @Post('bulk-stock')
+  @ResponseMessage('Prices and stock updated')
+  async bulkStock(@CurrentUser() user: AuthUserContext, @Body() dto: BulkStockDto) {
+    return this.manage.bulkStock(await this.scope(user), dto.rows);
   }
 
   @Get(':id')

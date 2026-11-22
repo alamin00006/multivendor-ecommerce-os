@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  selectUser,
   useAddToCart,
   useAvailableCouponsQuery,
   useBoughtTogetherQuery,
@@ -22,7 +23,6 @@ import {
   ShieldCheck,
   Star,
   Store,
-  Ticket,
   Truck,
   Zap,
 } from 'lucide-react';
@@ -32,10 +32,13 @@ import { useRouter } from 'next/navigation';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { fill } from '@/i18n';
-import { useHydrated, useI18n, Button, cn, QuantityStepper, Stars } from '@marketbd/ui';
+import { useHydrated, useI18n, Button, cn, QuantityStepper, Stars, VoucherCard } from '@marketbd/ui';
+import { useSelector } from 'react-redux';
 import { DealsFeed } from '@/components/home/home-sections';
 import { Countdown } from './product-card';
 import { rememberViewed } from '@/lib/recently-viewed';
+import { useCollectVoucher } from '@/components/account/use-collect';
+import { ChatButton } from './chat-button';
 import { ProductQuestions } from './product-questions';
 import { ProductRow } from './product-row';
 import { ProductReviews } from './product-reviews';
@@ -223,42 +226,21 @@ function InfoRow({ icon, title, sub }: { icon: ReactNode; title: ReactNode; sub?
   );
 }
 
-function Vouchers() {
-  const { money } = useI18n();
-  const { data: coupons } = useAvailableCouponsQuery();
-  if (!coupons?.length) return null;
+/** Vouchers that work for this product: MarketBD and payment vouchers plus this shop's own vouchers. */
+function Vouchers({ sellerId }: { sellerId: string | null }) {
+  const user = useSelector(selectUser);
+  const { data: coupons } = useAvailableCouponsQuery(user?.id);
+  const { onCollect, busyId } = useCollectVoucher();
+  const relevant = (coupons ?? []).filter((c) => c.scope !== 'STORE' || (sellerId !== null && c.seller?.id === sellerId));
+  if (!relevant.length) return null;
   return (
     <div>
-      <p className="mb-2 flex items-center gap-1 text-sm font-semibold">
+      <Link href="/account/vouchers" className="mb-2 flex w-fit items-center gap-1 text-sm font-semibold hover:text-primary-700">
         Vouchers <ChevronRight className="size-4" />
-      </p>
-      <div className="scrollbar-none flex gap-2 overflow-x-auto">
-        {coupons.map((c) => (
-          <div key={c.id} className="w-60 shrink-0 rounded-lg border border-dashed border-accent-300 bg-accent-50 p-2.5">
-            <div className="flex items-start gap-2">
-              <Ticket className="mt-0.5 size-5 shrink-0 text-accent-600" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] text-ink-600">{c.description ?? c.code}</p>
-                <p className="text-base font-bold text-accent-700">
-                  {c.type === 'PERCENTAGE' ? `${c.value}% off` : `${money(c.value)} off`}
-                </p>
-                <p className="text-[10px] text-ink-500">Min. spend {money(c.minOrderAmount)}</p>
-              </div>
-            </div>
-            <div className="mt-2 flex items-center justify-between border-t border-dashed border-accent-200 pt-2">
-              <span className="text-[10px] text-ink-400">Until {new Date(c.endsAt).toLocaleDateString('en-GB')}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(c.code);
-                  toast.success(`Code ${c.code} copied — apply it at checkout`);
-                }}
-                className="rounded-full bg-accent-500 px-3 py-0.5 text-[11px] font-semibold text-white hover:bg-accent-600"
-              >
-                Copy code
-              </button>
-            </div>
-          </div>
+      </Link>
+      <div className="scrollbar-none flex gap-3 overflow-x-auto pb-1">
+        {relevant.map((c) => (
+          <VoucherCard key={c.id} voucher={c} className="w-80 shrink-0" onCollect={() => void onCollect(c.id)} collecting={busyId === c.id} />
         ))}
       </div>
     </div>
@@ -349,7 +331,7 @@ function ProductInfo({ product, purchase }: { product: ProductDetail; purchase: 
         <InfoRow icon={<ShieldCheck className="size-4" />} title={product.warranty ?? 'No warranty'} />
       </div>
 
-      <Vouchers />
+      <Vouchers sellerId={product.seller?.id ?? null} />
 
       <div className="hidden gap-3 md:flex">
         <Button size="lg" variant="accent" className="flex-1" disabled={stock === 0} loading={purchase.adding} onClick={() => void purchase.buy(true)}>
@@ -359,6 +341,12 @@ function ProductInfo({ product, purchase }: { product: ProductDetail; purchase: 
           {t.product.addToCart}
         </Button>
       </div>
+      <ChatButton
+        productId={product.id}
+        slug={product.slug}
+        label={showSellerInfo && product.seller ? `Chat with ${product.seller.shopName}` : 'Chat with us'}
+        className="w-full py-2.5 text-sm"
+      />
     </div>
   );
 }
@@ -578,6 +566,7 @@ export function ProductView({ product }: { product: ProductDetail }) {
                   </p>
                 )}
               </div>
+              <ChatButton productId={product.id} slug={product.slug} label="Chat" />
               <Link
                 href={`/shop/${product.seller.slug}`}
                 className="flex items-center gap-1 rounded-md bg-accent-50 px-3 py-1.5 text-xs font-semibold text-accent-700 hover:bg-accent-100"

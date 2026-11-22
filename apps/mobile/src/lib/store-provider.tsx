@@ -7,6 +7,7 @@ import {
   type GuestCartItem,
   makeStore,
   restoreSession,
+  useChatRealtime,
   useGuestCartMerge,
 } from '@marketbd/api-client';
 import * as SecureStore from 'expo-secure-store';
@@ -36,6 +37,8 @@ function SessionBootstrap() {
     void dispatch(restoreSession());
   }, [dispatch]);
   useGuestCartMerge();
+  // Chat Socket.IO lives on the API origin (API_URL without the /api/v1 prefix).
+  useChatRealtime(API_URL.replace(/\/api\/v1$/, ''));
   return null;
 }
 

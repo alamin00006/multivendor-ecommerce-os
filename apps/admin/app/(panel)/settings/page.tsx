@@ -5,6 +5,7 @@ import { AlertTriangle, Store, Users } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader, Button, cn, Modal, Skeleton } from '@marketbd/ui';
+import { BrandColorsForm } from '@/components/brand-colors-form';
 import { StoreSettingsForm } from '@/components/store-settings-form';
 
 export default function SettingsPage() {
@@ -44,6 +45,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      <BrandColorsForm key={`${data.theme.primary}${data.theme.accent}`} theme={data.theme} />
       <StoreSettingsForm settings={data} />
 
       <Modal open={confirming} onClose={() => setConfirming(false)} title={target ? 'Turn multi-vendor ON?' : 'Switch to single-vendor store?'}>

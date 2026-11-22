@@ -9,3 +9,7 @@ export * from './endpoints/catalog.js';
 export * from './endpoints/account.js';
 export * from './endpoints/management.js';
 export * from './endpoints/questions.js';
+export * from './endpoints/chat.js';
+export * from './chat-realtime.js';
+export * from './endpoints/pos.js';
+export * from './endpoints/seller-business.js';

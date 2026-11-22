@@ -38,9 +38,15 @@ export default function SellerOrderPage() {
       <PageHeader
         title={`Order ${order.orderNumber}`}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <PaymentStatusBadge status={order.paymentStatus} />
             <OrderStatusBadge status={order.status} />
+            <a href={`/invoice/${order.id}`} target="_blank" rel="noopener" className="inline-flex h-8 items-center rounded-md border border-ink-200 bg-white px-3 text-xs font-semibold hover:bg-ink-50">
+              Invoice
+            </a>
+            <a href={`/invoice/${order.id}?type=slip`} target="_blank" rel="noopener" className="inline-flex h-8 items-center rounded-md border border-ink-200 bg-white px-3 text-xs font-semibold hover:bg-ink-50">
+              Packing slip
+            </a>
           </div>
         }
       />

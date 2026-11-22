@@ -16,5 +16,9 @@ export const toAuthUser = (user: UserWithSeller): AuthUser => ({
   avatarUrl: user.avatarUrl,
   locale: user.locale,
   sellerProfile: user.sellerProfile,
+  birthday: user.birthday ? user.birthday.toISOString().slice(0, 10) : null,
+  gender: user.gender,
+  emailVerified: Boolean(user.emailVerifiedAt),
+  phoneVerified: Boolean(user.phoneVerifiedAt),
   createdAt: user.createdAt.toISOString(),
 });

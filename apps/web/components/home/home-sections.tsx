@@ -225,17 +225,17 @@ export function CategoryGrid({ categories }: { categories: CategoryNode[] }) {
   );
 }
 
-/** Deals grid (6 columns on desktop) with a Load More button. */
-export function DealsFeed() {
+/** Deals grid (6 columns on desktop by default) with a Load More button. */
+export function DealsFeed({ cols, pageSize = 24 }: { cols?: string; pageSize?: number } = {}) {
   const { t } = useI18n();
   const [page, setPage] = useState(1);
-  const { data, isFetching, isError, refetch } = useProductFeedQuery({ page, limit: 24, sort: 'popular' });
+  const { data, isFetching, isError, refetch } = useProductFeedQuery({ page, limit: pageSize, sort: 'popular' });
   const hasMore = data ? data.meta.page < data.meta.totalPages : false;
 
   return (
     <section>
       <SectionHeader title={t.home.dealsCantMiss} />
-      <ProductGrid products={data?.items ?? []} loading={isFetching} skeletons={data ? 6 : 12} />
+      <ProductGrid products={data?.items ?? []} loading={isFetching} skeletons={data ? 6 : 12} cols={cols} />
       <div className="py-6 text-center text-sm text-ink-500">
         {isError ? (
           <button type="button" onClick={() => void refetch()} className="font-semibold text-primary-700">

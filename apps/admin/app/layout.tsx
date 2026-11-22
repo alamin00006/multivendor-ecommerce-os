@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Hind_Siliguri, Inter, Poppins } from 'next/font/google';
-import { BRAND } from '@marketbd/shared';
-import { AppProviders } from '@marketbd/ui';
+import { BRAND, type BrandTheme, DEFAULT_BRAND_COLORS } from '@marketbd/shared';
+import { AppProviders, BrandStyle } from '@marketbd/ui';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -15,13 +15,30 @@ export const metadata: Metadata = {
   icons: { icon: '/icon.svg' },
 };
 
-export const viewport: Viewport = { themeColor: '#08755a', width: 'device-width', initialScale: 1 };
+/** Brand colours from Admin → Settings, read on the server so the first paint uses them. */
+async function getBrandTheme(): Promise<BrandTheme> {
+  try {
+    const res = await fetch(`${process.env.API_INTERNAL_URL ?? 'http://localhost:4000'}/api/v1/settings/public`, { next: { revalidate: 15 } });
+    if (!res.ok) return DEFAULT_BRAND_COLORS;
+    return ((await res.json()) as { data?: { theme?: BrandTheme } }).data?.theme ?? DEFAULT_BRAND_COLORS;
+  } catch {
+    return DEFAULT_BRAND_COLORS;
+  }
+}
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export async function generateViewport(): Promise<Viewport> {
+  return { themeColor: (await getBrandTheme()).primary, width: 'device-width', initialScale: 1 };
+}
+
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const theme = await getBrandTheme();
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable} ${hind.variable}`}>
+      <head>
+        <BrandStyle theme={theme} />
+      </head>
       <body className="min-h-dvh font-sans">
-        <AppProviders locale="en">{children}</AppProviders>
+        <AppProviders locale="en" chatOrigin={process.env.NEXT_PUBLIC_API_ORIGIN ?? 'http://localhost:4000'}>{children}</AppProviders>
       </body>
     </html>
   );

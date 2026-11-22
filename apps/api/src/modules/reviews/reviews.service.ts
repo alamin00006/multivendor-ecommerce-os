@@ -1,10 +1,20 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { type ReviewPayload, ReviewListQuerySchema, type ReviewSummary, type ReviewView } from '@marketbd/shared';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  type ReviewableItem,
+  type ReviewPayload,
+  ReviewListQuerySchema,
+  type ReviewSummary,
+  type ReviewView,
+  type SellerReviewStats,
+  type SellerReviewView,
+} from '@marketbd/shared';
 import type { z } from 'zod';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { PaginatedResult, skipTake } from '../../common/pagination.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { PlatformModeService } from '../platform/platform-mode.service.js';
+import { SellerAccessService } from '../sellers/seller-access.service.js';
 
 const reviewInclude = {
   user: { select: { name: true, avatarUrl: true } },
@@ -27,6 +37,8 @@ const toView = (r: ReviewRow, withProduct = false): ReviewView => ({
   images: r.images.map((i) => i.url),
   isVerifiedPurchase: r.isVerifiedPurchase,
   isVisible: r.isVisible,
+  sellerReply: r.sellerReply,
+  sellerRepliedAt: r.sellerRepliedAt?.toISOString() ?? null,
   user: { name: displayName(r.user.name), avatarUrl: r.user.avatarUrl },
   ...(withProduct ? { product: r.product } : {}),
   createdAt: r.createdAt.toISOString(),
@@ -39,6 +51,8 @@ export class ReviewsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mode: PlatformModeService,
+    private readonly access: SellerAccessService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async list(productId: string, query: ListQuery) {
@@ -80,6 +94,52 @@ export class ReviewsService {
       sum += g.rating * g._count;
     }
     return { average: count ? Math.round((sum / count) * 10) / 10 : 0, count, distribution };
+  }
+
+  /** The signed-in customer's own reviews (including hidden ones), newest first. */
+  async mine(userId: string, query: { page: number; limit: number }) {
+    const where: Prisma.ReviewWhereInput = { userId };
+    const [rows, total] = await Promise.all([
+      this.prisma.review.findMany({ where, include: reviewInclude, orderBy: { createdAt: 'desc' }, ...skipTake(query.page, query.limit) }),
+      this.prisma.review.count({ where }),
+    ]);
+    return PaginatedResult.of(
+      rows.map((r) => toView(r, true)),
+      query.page,
+      query.limit,
+      total,
+    );
+  }
+
+  /** Delivered purchases the customer has not reviewed yet — one entry per product. */
+  async pending(userId: string): Promise<ReviewableItem[]> {
+    const items = await this.prisma.orderItem.findMany({
+      where: {
+        order: { userId },
+        subOrder: { status: 'DELIVERED' },
+        product: { reviews: { none: { userId } } },
+      },
+      include: {
+        order: { select: { id: true, orderNumber: true } },
+        product: { select: { slug: true } },
+        subOrder: { select: { history: { where: { toStatus: 'DELIVERED' }, orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } } } },
+      },
+      orderBy: { order: { createdAt: 'desc' } },
+      take: 100,
+    });
+    const seen = new Set<string>();
+    return items
+      .filter((i) => (seen.has(i.productId) ? false : (seen.add(i.productId), true)))
+      .map((i) => ({
+        productId: i.productId,
+        productSlug: i.product.slug,
+        title: i.title,
+        imageUrl: i.imageUrl,
+        variantLabel: i.variantLabel,
+        orderId: i.order.id,
+        orderNumber: i.order.orderNumber,
+        deliveredAt: i.subOrder.history[0]?.createdAt.toISOString() ?? null,
+      }));
   }
 
   async create(userId: string, input: ReviewPayload): Promise<ReviewView> {
@@ -163,4 +223,68 @@ export class ReviewsService {
     await this.refreshRatings(review.productId);
     return toView(review, true);
   }
+
+  // ───── Seller ─────
+
+  private readonly sellerInclude = {
+    ...reviewInclude,
+    product: { select: { id: true, slug: true, title: true, images: { orderBy: { sortOrder: 'asc' as const }, take: 1, select: { url: true } } } },
+  } satisfies Prisma.ReviewInclude;
+
+  private toSellerView(r: Prisma.ReviewGetPayload<{ include: ReviewsService['sellerInclude'] }>): SellerReviewView {
+    const { images, ...product } = r.product;
+    return { ...toView(r), product, imageUrl: images[0]?.url ?? null };
+  }
+
+  /** Reviews on the seller's products (hidden ones included, so the shop knows about them). */
+  async sellerList(userId: string, query: { page: number; limit: number; rating?: number; replied?: 'yes' | 'no' }) {
+    const seller = await this.access.requireActiveSeller(userId);
+    const where: Prisma.ReviewWhereInput = {
+      product: { sellerId: seller.id },
+      ...(query.rating ? { rating: query.rating } : {}),
+      ...(query.replied === 'yes' ? { sellerReply: { not: null } } : query.replied === 'no' ? { sellerReply: null } : {}),
+    };
+    const [rows, total] = await Promise.all([
+      this.prisma.review.findMany({ where, include: this.sellerInclude, orderBy: { createdAt: 'desc' }, ...skipTake(query.page, query.limit) }),
+      this.prisma.review.count({ where }),
+    ]);
+    return PaginatedResult.of(rows.map((r) => this.toSellerView(r)), query.page, query.limit, total);
+  }
+
+  async sellerStats(userId: string): Promise<SellerReviewStats> {
+    const seller = await this.access.requireActiveSeller(userId);
+    const where: Prisma.ReviewWhereInput = { product: { sellerId: seller.id }, isVisible: true };
+    const [groups, unreplied] = await Promise.all([
+      this.prisma.review.groupBy({ by: ['rating'], where, _count: true }),
+      this.prisma.review.count({ where: { ...where, sellerReply: null } }),
+    ]);
+    const distribution: SellerReviewStats['distribution'] = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
+    let count = 0;
+    let sum = 0;
+    for (const g of groups) {
+      distribution[String(g.rating) as keyof typeof distribution] = g._count;
+      count += g._count;
+      sum += g.rating * g._count;
+    }
+    return { average: count ? Math.round((sum / count) * 10) / 10 : 0, count, unreplied, distribution };
+  }
+
+  async reply(userId: string, reviewId: string, reply: string | null): Promise<SellerReviewView> {
+    const seller = await this.access.requireActiveSeller(userId);
+    const review = await this.prisma.review.findFirst({ where: { id: reviewId, product: { sellerId: seller.id } }, include: { product: { select: { title: true, slug: true } } } });
+    if (!review) throw new NotFoundException('Review not found');
+    if (reply === null && !review.sellerReply) throw new BadRequestException('There is no reply to remove');
+    const updated = await this.prisma.review.update({
+      where: { id: reviewId },
+      data: { sellerReply: reply, sellerRepliedAt: reply ? new Date() : null },
+      include: this.sellerInclude,
+    });
+    if (reply && !review.sellerReply) {
+      await this.notifications.notify(review.userId, 'ORDER', `${seller.shopName} replied to your review`, `On "${review.product.title}": ${reply.slice(0, 120)}`, {
+        productSlug: review.product.slug,
+      });
+    }
+    return this.toSellerView(updated);
+  }
+
 }

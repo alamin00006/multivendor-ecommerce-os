@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { Hind_Siliguri, Inter, Poppins } from 'next/font/google';
 import { BRAND } from '@marketbd/shared';
-import { AppProviders } from '@marketbd/ui';
+import { AppProviders, BrandStyle } from '@marketbd/ui';
 import { getLocale } from '@/i18n/server';
-import { SITE_URL } from '@/lib/server-api';
+import { getBrandTheme, SITE_URL } from '@/lib/server-api';
 import './globals.css';
 
 const hind = Hind_Siliguri({ subsets: ['bengali', 'latin'], weight: ['400', '500', '600', '700'], variable: '--font-hind' });
@@ -19,14 +19,19 @@ export const metadata: Metadata = {
   icons: { icon: '/icon.svg' },
 };
 
-export const viewport: Viewport = { themeColor: '#08755a', width: 'device-width', initialScale: 1 };
+export async function generateViewport(): Promise<Viewport> {
+  return { themeColor: (await getBrandTheme()).primary, width: 'device-width', initialScale: 1 };
+}
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const locale = await getLocale();
+  const [locale, theme] = await Promise.all([getLocale(), getBrandTheme()]);
   return (
     <html lang={locale} className={`${hind.variable} ${inter.variable} ${poppins.variable}`}>
+      <head>
+        <BrandStyle theme={theme} />
+      </head>
       <body className="min-h-dvh font-sans">
-        <AppProviders locale={locale} guestCart>
+        <AppProviders locale={locale} guestCart chatOrigin={process.env.NEXT_PUBLIC_API_ORIGIN ?? 'http://localhost:4000'}>
           {children}
         </AppProviders>
       </body>

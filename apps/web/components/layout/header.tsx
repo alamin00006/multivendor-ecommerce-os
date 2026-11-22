@@ -7,10 +7,13 @@ import {
   useLogoutMutation,
   useMarketplaceMode,
   useUnreadCountQuery,
+  useChatUnreadQuery,
+  useChatLive,
 } from '@marketbd/api-client';
 import { BANGLA_ENABLED, BRAND, type CategoryNode } from '@marketbd/shared';
 import {
   Bell,
+  MessageCircle,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -19,7 +22,9 @@ import {
   Package,
   ShoppingCart,
   Smartphone,
+  Star,
   Store,
+  Ticket,
   User,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -110,13 +115,19 @@ function AccountMenu() {
       <div className="absolute right-0 top-full z-40 hidden pt-2 group-hover:block">
         <div className="w-56 overflow-hidden rounded-lg border border-ink-100 bg-white py-1 shadow-raised">
           <Link href="/account" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-ink-50">
-            <User className="size-4" /> {t.common.account}
+            <User className="size-4" /> Manage My Account
           </Link>
           <Link href="/account/orders" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-ink-50">
-            <Package className="size-4" /> {t.common.orders}
+            <Package className="size-4" /> My Orders
           </Link>
           <Link href="/account/wishlist" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-ink-50">
-            <Heart className="size-4" /> {t.common.wishlist}
+            <Heart className="size-4" /> My Wishlist
+          </Link>
+          <Link href="/account/reviews" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-ink-50">
+            <Star className="size-4" /> My Reviews
+          </Link>
+          <Link href="/account/vouchers" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-ink-50">
+            <Ticket className="size-4" /> Voucher Center
           </Link>
           {user.role === 'SELLER' && sellerFeatures && (
             <Link href="/seller" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-ink-50">
@@ -215,6 +226,8 @@ export function Header() {
   const cartCount = useCartCount();
   const authed = useSelector(selectAuth).status === 'authenticated';
   const { data: unread } = useUnreadCountQuery(undefined, { skip: !authed, pollingInterval: 60_000 });
+  const chatLive = useChatLive();
+  const { data: chatUnread } = useChatUnreadQuery('customer', { skip: !authed, pollingInterval: chatLive ? 0 : 30_000 });
 
   return (
     <header className="sticky top-0 z-30 bg-white shadow-sm">
@@ -235,6 +248,16 @@ export function Header() {
           <div className="hidden md:block">
             <AccountMenu />
           </div>
+          {authed && (
+            <Link href="/account/messages" className="relative hidden text-ink-700 md:block" aria-label="Messages">
+              <MessageCircle className="size-6" />
+              {chatUnread && chatUnread.count > 0 ? (
+                <span className="absolute -right-2 -top-1.5 rounded-full bg-accent-500 px-1.5 text-[10px] font-bold text-white">
+                  {chatUnread.count > 99 ? '99+' : chatUnread.count}
+                </span>
+              ) : null}
+            </Link>
+          )}
           {authed && (
             <Link
               href="/account/notifications"

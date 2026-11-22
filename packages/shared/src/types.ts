@@ -7,10 +7,14 @@ import type {
   AddressLabel,
   BannerPlacement,
   CampaignType,
+  CouponScope,
   CouponType,
+  Gender,
   LinkTargetType,
   Locale,
   NotificationType,
+  OnlinePaymentMethod,
+  OrderChannel,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
@@ -43,6 +47,12 @@ export interface AuthUser {
   avatarUrl: string | null;
   locale: Locale;
   sellerProfile: SellerBadge | null;
+  /** YYYY-MM-DD */
+  birthday: string | null;
+  gender: Gender | null;
+  /** Set once the address was confirmed (OTP / email link). */
+  emailVerified: boolean;
+  phoneVerified: boolean;
   createdAt: IsoDate;
 }
 
@@ -64,6 +74,8 @@ export interface OtpRequestResult {
 
 export interface PublicSettings {
   multiVendorEnabled: boolean;
+  /** Brand colours set in Admin → Settings. */
+  theme: { primary: string; accent: string };
   shipping: {
     /** Fees in poisha. */
     insideDhaka: number;
@@ -306,10 +318,10 @@ export interface CheckoutPreview {
   shippingFee: number;
   discount: number;
   total: number;
-  coupon: { code: string; discount: number } | null;
+  coupon: { code: string; discount: number; appliesTo: 'items' | 'shipping' } | null;
   couponError: string | null;
   blockedItems: number;
-  paymentMethods: Array<{ method: PaymentMethod; enabled: boolean }>;
+  paymentMethods: Array<{ method: OnlinePaymentMethod; enabled: boolean }>;
 }
 
 export interface OrderItemView {
@@ -365,7 +377,34 @@ export interface ReturnView {
   imageUrls: string[];
   status: ReturnStatus;
   adminNote: string | null;
+  /** Note from the shop (approve / reject / received). */
+  sellerNote: string | null;
   createdAt: IsoDate;
+}
+
+/** A customer's own return request, with the order it belongs to. */
+export interface MyReturnView extends ReturnView {
+  orderId: string;
+  orderNumber: string;
+  orderTotal: number;
+  /** Shop of the returned package (the brand name in single-vendor mode). */
+  shopName: string | null;
+  items: { title: string; imageUrl: string | null; quantity: number }[];
+  updatedAt: IsoDate;
+}
+
+/** A delivered order the customer can still send back, with its returnable packages. */
+export interface ReturnableOrder {
+  orderId: string;
+  orderNumber: string;
+  deliveredAt: IsoDate | null;
+  /** Last day of the return window. */
+  returnBy: IsoDate | null;
+  packages: {
+    subOrderId: string;
+    shopName: string | null;
+    items: { title: string; imageUrl: string | null; variantLabel: string; quantity: number; lineTotal: number }[];
+  }[];
 }
 
 export interface PaymentView {
@@ -384,9 +423,13 @@ export interface OrderSummary {
   status: OrderStatus;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
+  /** ONLINE checkout or a POS counter sale. */
+  channel: OrderChannel;
   total: number;
   itemCount: number;
   previewImages: string[];
+  /** Shops in the order (one per package). Hide them in single-vendor mode. */
+  shopNames: string[];
   customer?: { id: string; name: string; phone: string | null };
   createdAt: IsoDate;
 }
@@ -447,6 +490,9 @@ export interface ReviewView {
   images: string[];
   isVerifiedPurchase: boolean;
   isVisible: boolean;
+  /** Public reply from the shop. */
+  sellerReply: string | null;
+  sellerRepliedAt: IsoDate | null;
   user: { name: string; avatarUrl: string | null };
   product?: { id: string; slug: string; title: string };
   createdAt: IsoDate;
@@ -538,6 +584,20 @@ export interface CouponView {
   startsAt: IsoDate;
   endsAt: IsoDate;
   isActive: boolean;
+  scope: CouponScope;
+  /** STORE vouchers: the shop whose items it applies to. */
+  seller: { id: string; shopName: string; slug: string; logoUrl: string | null } | null;
+  /** PAYMENT vouchers: the method that unlocks it. */
+  paymentMethod: PaymentMethod | null;
+  /** Whether the signed-in viewer saved it ("Collect"); false for guests. */
+  collected: boolean;
+}
+
+/** A voucher in the customer's wallet. */
+export interface MyVoucherView extends CouponView {
+  collectedAt: IsoDate;
+  /** AVAILABLE = can still be used; USED = per-user limit reached; EXPIRED = ended or switched off. */
+  status: 'AVAILABLE' | 'USED' | 'EXPIRED';
 }
 
 export interface NotificationView {
@@ -612,4 +672,196 @@ export interface QuestionView {
   isVisible: boolean;
   product?: { id: string; slug: string; title: string; imageUrl: string | null };
   createdAt: IsoDate;
+}
+
+// ───────── Customer ↔ seller chat ─────────
+
+export type ChatSide = 'customer' | 'seller';
+
+export interface ChatProductRef {
+  id: string;
+  slug: string;
+  title: string;
+  imageUrl: string | null;
+  price: number;
+}
+
+export interface ChatMessageView {
+  id: string;
+  side: ChatSide;
+  body: string;
+  product: ChatProductRef | null;
+  createdAt: IsoDate;
+}
+
+export interface ConversationView {
+  id: string;
+  /** The shop; in single-vendor mode this is the store itself, shown under the brand name. */
+  shop: { id: string; name: string; slug: string; logoUrl: string | null; isHouseStore: boolean };
+  customer: { id: string; name: string; avatarUrl: string | null };
+  lastMessage: { body: string; side: ChatSide; createdAt: IsoDate } | null;
+  /** Unread messages for the viewer's side. */
+  unread: number;
+  /** When the other side last read the thread — messages sent before this are "seen". */
+  otherLastReadAt: IsoDate | null;
+  /** Which side the viewer is on. */
+  viewerSide: ChatSide;
+  createdAt: IsoDate;
+}
+
+export interface ChatThread {
+  conversation: ConversationView;
+  /** Oldest first. */
+  messages: ChatMessageView[];
+  hasMore: boolean;
+}
+
+/** A delivered purchase the customer has not reviewed yet. */
+export interface ReviewableItem {
+  productId: string;
+  productSlug: string;
+  title: string;
+  imageUrl: string | null;
+  variantLabel: string;
+  orderId: string;
+  orderNumber: string;
+  deliveredAt: IsoDate | null;
+}
+
+// ───────── Point of sale ─────────
+
+export interface PosVariant {
+  id: string;
+  sku: string;
+  label: string;
+  /** Regular selling price in poisha (counter sales ignore flash deals). */
+  price: number;
+  stock: number;
+}
+
+export interface PosProduct {
+  id: string;
+  title: string;
+  slug: string;
+  imageUrl: string | null;
+  brand: string | null;
+  variants: PosVariant[];
+}
+
+export interface PosSaleResult {
+  order: OrderDetail;
+  cashReceived: number;
+  change: number;
+  /** Registered customer the sale was linked to (null = walk-in). */
+  customer: { id: string; name: string; phone: string | null } | null;
+  cashier: string;
+  /** Receipt header: the shop that made the sale. */
+  shop: { name: string; phone: string | null; address: string | null };
+}
+
+// ───────── Seller business: earnings, payouts, returns, reviews, reports ─────────
+
+export interface PayoutAccountView {
+  method: 'BKASH' | 'NAGAD' | 'BANK';
+  accountName: string;
+  accountNumber: string;
+  bankName?: string;
+  branch?: string;
+}
+
+export interface SellerEarnings {
+  /** Delivered sales (incl. delivery fee, after discounts), all time. */
+  gross: number;
+  commission: number;
+  /** What the shop earned: online sales minus commission; counter sales only owe the commission. */
+  net: number;
+  /** Delivered inside the return window, or with an open return. */
+  onHold: number;
+  /** Cleared earnings not yet requested or paid out. */
+  available: number;
+  /** Payout requests waiting for admin. */
+  requested: number;
+  paidOut: number;
+  holdDays: number;
+  minPayout: number;
+  payoutAccount: PayoutAccountView | null;
+}
+
+export interface EarningRow {
+  subOrderId: string;
+  orderId: string;
+  orderNumber: string;
+  channel: OrderChannel;
+  deliveredAt: IsoDate | null;
+  total: number;
+  commissionRate: number;
+  commissionAmount: number;
+  net: number;
+  state: 'ON_HOLD' | 'AVAILABLE';
+  /** When an on-hold amount becomes available (null while a return is open). */
+  availableOn: IsoDate | null;
+}
+
+export interface PayoutView {
+  id: string;
+  amount: number;
+  status: 'REQUESTED' | 'PAID' | 'REJECTED';
+  method: 'BKASH' | 'NAGAD' | 'BANK';
+  accountName: string;
+  accountNumber: string;
+  bankName: string | null;
+  branch: string | null;
+  sellerNote: string | null;
+  adminNote: string | null;
+  reference: string | null;
+  processedAt: IsoDate | null;
+  createdAt: IsoDate;
+  /** Admin list only. */
+  seller?: { id: string; shopName: string; slug: string; available: number };
+}
+
+export interface SellerReturnView {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  subOrderId: string | null;
+  /** False for whole-order returns (admin handles those). */
+  canAct: boolean;
+  reason: string;
+  imageUrls: string[];
+  status: ReturnStatus;
+  adminNote: string | null;
+  sellerNote: string | null;
+  customer: { name: string; phone: string | null };
+  items: Array<{ title: string; variantLabel: string; imageUrl: string | null; quantity: number; lineTotal: number }>;
+  amount: number;
+  createdAt: IsoDate;
+  updatedAt: IsoDate;
+}
+
+export interface SellerReviewView extends ReviewView {
+  product: { id: string; slug: string; title: string };
+  imageUrl: string | null;
+}
+
+export interface SellerReviewStats {
+  average: number;
+  count: number;
+  unreplied: number;
+  distribution: Record<'1' | '2' | '3' | '4' | '5', number>;
+}
+
+export interface SellerReport {
+  from: string;
+  to: string;
+  totals: { orders: number; units: number; gross: number; commission: number; net: number; avgOrder: number; cancelled: number; returned: number };
+  daily: Array<{ date: string; orders: number; gross: number; net: number }>;
+  topProducts: Array<{ productId: string; title: string; imageUrl: string | null; units: number; gross: number }>;
+  byStatus: Array<{ status: OrderStatus; count: number }>;
+  byChannel: Array<{ channel: OrderChannel; orders: number; gross: number }>;
+}
+
+export interface BulkStockResult {
+  updated: number;
+  errors: Array<{ row: number; sku: string; message: string }>;
 }

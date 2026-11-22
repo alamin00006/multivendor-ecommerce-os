@@ -1,3 +1,4 @@
+import { HexColorSchema } from '../brand-colors.js';
 import { z } from 'zod';
 import { RoleSchema, SellerStatusSchema } from '../enums.js';
 import { BdPhoneSchema, PaginationQuerySchema, SlugSchema, UrlSchema } from './common.js';
@@ -28,6 +29,9 @@ export const UpdatePlatformSettingsSchema = z
     supportEmail: z.string().trim().email().max(254),
     supportHours: z.string().trim().min(2).max(60),
     socialLinks: SocialLinksSchema,
+    /** Brand colours (primary = shade 700, accent = shade 500). */
+    brandPrimary: HexColorSchema,
+    brandAccent: HexColorSchema,
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'Nothing to update');

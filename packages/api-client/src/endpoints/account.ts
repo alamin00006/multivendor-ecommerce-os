@@ -12,13 +12,17 @@ import type {
   GeoOption,
   InitiatePaymentInput,
   MergeCartInput,
+  MyReturnView,
+  ReturnableOrder,
+  ReturnStatus,
+  ReviewableItem,
   NotificationListQuery,
   NotificationView,
   OrderDetail,
   OrderListQuery,
   OrderSummary,
   PaymentInitResult,
-  PaymentMethod,
+  OnlinePaymentMethod,
   PlaceOrderResult,
   ReturnRequestInput,
   ReviewInput,
@@ -131,9 +135,9 @@ export const accountApi = baseApi.injectEndpoints({
     }),
 
     // ───── Checkout & orders ─────
-    paymentMethods: b.query<Array<{ method: PaymentMethod; enabled: boolean }>, void>({
+    paymentMethods: b.query<Array<{ method: OnlinePaymentMethod; enabled: boolean }>, void>({
       query: () => '/payments/methods',
-      transformResponse: unwrap<Array<{ method: PaymentMethod; enabled: boolean }>>,
+      transformResponse: unwrap<Array<{ method: OnlinePaymentMethod; enabled: boolean }>>,
     }),
     checkoutPreview: b.query<CheckoutPreview, CheckoutPreviewInput>({
       query: (body) => ({ url: '/checkout/preview', method: 'POST', body }),
@@ -174,6 +178,28 @@ export const accountApi = baseApi.injectEndpoints({
       query: (body) => ({ url: '/reviews', method: 'POST', body }),
       transformResponse: unwrap<ReviewView>,
       invalidatesTags: ['Reviews', 'Orders', 'Product'],
+    }),
+    /** Delivered orders still inside the return window ("Initiate Return"). */
+    returnableOrders: b.query<ReturnableOrder[], void>({
+      query: () => '/orders/returnable',
+      transformResponse: unwrap<ReturnableOrder[]>,
+      providesTags: ['Orders'],
+    }),
+    myReturns: b.query<Page<MyReturnView>, { page?: number; limit?: number; status?: ReturnStatus }>({
+      query: (params) => `/returns${qs(params)}`,
+      transformResponse: unwrapPage<MyReturnView>,
+      providesTags: ['Orders'],
+    }),
+    myReviews: b.query<Page<ReviewView>, { page?: number; limit?: number }>({
+      query: (params) => `/reviews/mine${qs(params)}`,
+      transformResponse: unwrapPage<ReviewView>,
+      providesTags: ['Reviews'],
+    }),
+    /** Delivered purchases still waiting for a review. */
+    pendingReviews: b.query<ReviewableItem[], void>({
+      query: () => '/reviews/pending',
+      transformResponse: unwrap<ReviewableItem[]>,
+      providesTags: ['Reviews', 'Orders'],
     }),
 
     // ───── Notifications ─────
@@ -244,6 +270,10 @@ export const {
   useCancelOrderMutation,
   useRequestReturnMutation,
   useCreateReviewMutation,
+  useMyReturnsQuery,
+  useReturnableOrdersQuery,
+  useMyReviewsQuery,
+  usePendingReviewsQuery,
   useNotificationsQuery,
   useUnreadCountQuery,
   useMarkNotificationReadMutation,
