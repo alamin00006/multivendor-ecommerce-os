@@ -1,11 +1,12 @@
 import { errorMessage, useMyReturnsQuery, useRequestReturnMutation, useReturnableOrdersQuery } from '@marketbd/api-client';
-import { type MyReturnView, type ReturnableOrder, ReturnRequestSchema, type ReturnStatus } from '@marketbd/shared';
+import { BRAND, type MyReturnView, type ReturnableOrder, ReturnRequestSchema, type ReturnStatus } from '@marketbd/shared';
 import { Image } from 'expo-image';
 import { router, Stack } from 'expo-router';
 import { Check, PackageOpen, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { EmptyCard, fmtDate, Sheet, UnderlineTabs } from '@/components/account';
+import { PhotoPicker } from '@/components/photo-picker';
 import { Badge, Button, colors, Loading } from '@/components/ui';
 import { useI18n } from '@/i18n';
 import { img } from '@/lib/config';
@@ -89,7 +90,7 @@ function ReturnCard({ r }: { r: MyReturnView }) {
         </View>
       ) : null}
       {r.status !== 'REJECTED' && r.sellerNote ? <Text className="rounded-lg bg-ink-50 px-3 py-2 text-xs text-ink-600">Note from the shop: {r.sellerNote}</Text> : null}
-      {r.status !== 'REJECTED' && r.adminNote ? <Text className="rounded-lg bg-ink-50 px-3 py-2 text-xs text-ink-600">Note from MarketBD: {r.adminNote}</Text> : null}
+      {r.status !== 'REJECTED' && r.adminNote ? <Text className="rounded-lg bg-ink-50 px-3 py-2 text-xs text-ink-600">Note from {BRAND.name}: {r.adminNote}</Text> : null}
       {r.status === 'REFUNDED' ? <Text className="text-xs font-semibold text-primary-700">Refund of up to {money(r.orderTotal)} issued to your original payment method.</Text> : null}
     </Pressable>
   );
@@ -98,10 +99,11 @@ function ReturnCard({ r }: { r: MyReturnView }) {
 function RequestSheet({ order, subOrderId, onClose }: { order: ReturnableOrder; subOrderId: string; onClose: () => void }) {
   const [request, state] = useRequestReturnMutation();
   const [reason, setReason] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const pkg = order.packages.find((p) => p.subOrderId === subOrderId);
   const submit = async () => {
-    const parsed = ReturnRequestSchema.safeParse({ reason, subOrderId });
+    const parsed = ReturnRequestSchema.safeParse({ reason, subOrderId, imageUrls: photos });
     if (!parsed.success) return setError(parsed.error.issues[0]?.message ?? 'Check the form');
     setError(null);
     try {
@@ -125,6 +127,8 @@ function RequestSheet({ order, subOrderId, onClose }: { order: ReturnableOrder; 
         onChangeText={setReason}
         accessibilityLabel="Return reason"
       />
+      <Text className="text-sm font-medium text-ink-700">Photos (optional)</Text>
+      <PhotoPicker value={photos} onChange={setPhotos} folder="returns" />
       {error ? <Text className="text-xs text-red-600">{error}</Text> : null}
       <Button title="Submit return request" onPress={() => void submit()} loading={state.isLoading} />
     </Sheet>

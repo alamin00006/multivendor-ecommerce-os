@@ -117,3 +117,13 @@ export const UploadFolderSchema = z.object({
   folder: z.enum(['products', 'categories', 'brands', 'banners', 'campaigns', 'shops', 'reviews', 'avatars', 'returns']).default('products'),
 });
 export type UploadFolder = z.infer<typeof UploadFolderSchema>['folder'];
+
+// ───────── Push notifications ─────────
+
+export const PushTokenSchema = z.object({
+  /** Expo push token, e.g. ExponentPushToken[xxxx]. */
+  token: z.string().trim().regex(/^(Exponent|Expo)PushToken\[[A-Za-z0-9_-]+\]$/, 'Invalid push token'),
+  platform: z.enum(['android', 'ios']),
+});
+export type PushTokenInput = z.infer<typeof PushTokenSchema>;
+export const RemovePushTokenSchema = PushTokenSchema.pick({ token: true });

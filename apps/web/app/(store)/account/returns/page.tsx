@@ -1,7 +1,7 @@
 'use client';
 
 import { errorMessage, useMyReturnsQuery, useRequestReturnMutation, useReturnableOrdersQuery } from '@marketbd/api-client';
-import { type MyReturnView, type ReturnableOrder, ReturnRequestSchema, type ReturnStatus } from '@marketbd/shared';
+import { BRAND, type MyReturnView, type ReturnableOrder, ReturnRequestSchema, type ReturnStatus } from '@marketbd/shared';
 import { Check, PackageOpen, RotateCcw, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -86,7 +86,7 @@ function ReturnCard({ r, children }: { r: MyReturnView; children?: ReactNode }) 
           <span className="text-ink-500">Reason:</span> {r.reason}
         </p>
         {r.sellerNote && <p className="rounded bg-ink-50 px-3 py-2 text-xs text-ink-600">Note from the shop: {r.sellerNote}</p>}
-        {r.adminNote && <p className="rounded bg-ink-50 px-3 py-2 text-xs text-ink-600">Note from MarketBD: {r.adminNote}</p>}
+        {r.adminNote && <p className="rounded bg-ink-50 px-3 py-2 text-xs text-ink-600">Note from {BRAND.name}: {r.adminNote}</p>}
         {children}
       </div>
     </li>

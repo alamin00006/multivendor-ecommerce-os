@@ -7,7 +7,7 @@ import { BadgeCheck, Clock, Store, TrendingUp, Truck } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import { toast } from 'sonner';
-import { RequireAuth, Badge, Button, ButtonLink, Skeleton } from '@marketbd/ui';
+import { RequireAuth, Badge, Button, ButtonLink, partnerUrl, Skeleton } from '@marketbd/ui';
 
 function Application() {
   const user = useSelector(selectUser);
@@ -30,7 +30,7 @@ function Application() {
         {shop.status === 'APPROVED' && (
           <>
             <p className="text-sm text-ink-600">Your shop is approved. Sign out and sign in again if the Seller Center does not open.</p>
-            <ButtonLink href="/seller">Open Seller Center</ButtonLink>
+            <ButtonLink href={partnerUrl()}>Open Seller Center</ButtonLink>
           </>
         )}
       </div>
@@ -38,7 +38,7 @@ function Application() {
   }
   return (
     <form
-      className="card grid gap-4 p-6 sm:grid-cols-2"
+      className="card grid grid-cols-1 gap-4 p-6 sm:grid-cols-2"
       noValidate
       onSubmit={handleSubmit(async (v) => {
         try {
@@ -84,11 +84,11 @@ export default function SellPage() {
     { icon: Clock, title: 'Quick approval', text: 'Most shops are approved within 2 working days.' },
   ];
   return (
-    <div className="container-site grid gap-6 pt-6 lg:grid-cols-[1fr_480px]">
+    <div className="container-site grid grid-cols-1 gap-6 pt-6 lg:grid-cols-[1fr_480px]">
       <div className="space-y-5">
         <h1 className="font-display text-3xl font-bold">Sell on {BRAND.name}</h1>
         <p className="text-ink-600">Create your shop, list products with variants and start receiving orders.</p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {perks.map(({ icon: Icon, title, text }) => (
             <div key={title} className="card flex gap-3 p-4">
               <Icon className="size-6 shrink-0 text-primary-700" />

@@ -57,7 +57,7 @@ export function AddressForm({ address, onSaved }: { address?: AddressView; onSav
   });
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-2" noValidate>
+    <form onSubmit={onSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-2" noValidate>
       <div>
         <label className="label" htmlFor="fullName">{t.auth.name}</label>
         <input id="fullName" className="input" {...register('fullName')} autoComplete="name" />

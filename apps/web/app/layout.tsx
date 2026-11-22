@@ -16,7 +16,13 @@ export const metadata: Metadata = {
   description: BRAND.tagline,
   applicationName: BRAND.name,
   openGraph: { siteName: BRAND.name, type: 'website', locale: 'en_BD' },
-  icons: { icon: '/icon.svg' },
+  icons: {
+    icon: [
+      { url: '/brand/icon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/brand/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: '/brand/icon-192.png',
+  },
 };
 
 export async function generateViewport(): Promise<Viewport> {

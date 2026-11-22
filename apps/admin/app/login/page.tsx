@@ -34,7 +34,7 @@ function LoginForm() {
   return (
     <div className="card w-full max-w-sm space-y-5 p-6">
       <div className="space-y-2 text-center">
-        <Logo className="justify-center" />
+        <Logo withTagline className="justify-center" />
         <p className="flex items-center justify-center gap-1.5 text-sm text-ink-500">
           <ShieldCheck className="size-4 text-primary-700" /> {BRAND.name} Admin
         </p>

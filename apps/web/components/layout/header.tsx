@@ -31,7 +31,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { useI18n } from '@marketbd/ui';
+import { partnerUrl, useI18n } from '@marketbd/ui';
 import { Logo } from '@marketbd/ui';
 import { SearchBar } from './search-bar';
 
@@ -130,9 +130,9 @@ function AccountMenu() {
             <Ticket className="size-4" /> Voucher Center
           </Link>
           {user.role === 'SELLER' && sellerFeatures && (
-            <Link href="/seller" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-ink-50">
+            <a href={partnerUrl()} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-ink-50">
               <Store className="size-4" /> {t.common.sellerCenter}
-            </Link>
+            </a>
           )}
           {user.role === 'ADMIN' && (
             <a

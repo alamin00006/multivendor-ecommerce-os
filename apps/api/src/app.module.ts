@@ -30,6 +30,7 @@ import { QuestionsModule } from './modules/questions/questions.module.js';
 import { ChatModule } from './modules/chat/chat.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
 import { SellersModule } from './modules/sellers/sellers.module.js';
+import { ShippingModule } from './modules/shipping/shipping.module.js';
 import { UploadsModule } from './modules/uploads/uploads.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { WishlistModule } from './modules/wishlist/wishlist.module.js';
@@ -64,6 +65,7 @@ class HealthController {
     OrderStatusModule,
     PaymentsModule,
     OrdersModule,
+    ShippingModule,
     PosModule,
     PayoutsModule,
     ReviewsModule,

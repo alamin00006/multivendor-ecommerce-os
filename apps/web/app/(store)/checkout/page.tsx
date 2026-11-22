@@ -12,6 +12,7 @@ import {
   useRemoveCartItemMutation,
   useUpdateCartItemMutation,
 } from '@marketbd/api-client';
+import { BRAND } from '@marketbd/shared';
 import type { CouponView, OnlinePaymentMethod, PaymentMethod } from '@marketbd/shared';
 import { Banknote, BadgeCheck, Check, ChevronDown, ChevronRight, CreditCard, MapPin, Plus, ShieldCheck, Smartphone, Ticket, Trash2 } from 'lucide-react';
 import Image from 'next/image';
@@ -114,7 +115,7 @@ function Checkout() {
   if (isError) return <ErrorState message={t.common.error} onRetry={() => void refetch()} />;
 
   return (
-    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
+    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
       {/* ───────── Left: items + payment ───────── */}
       <div className="min-w-0 space-y-6">
         <section>
@@ -146,7 +147,7 @@ function Checkout() {
                               <span className="rounded-full bg-ink-50 px-2 py-0.5 font-medium text-ink-700">{Object.values(item.variant.attributes).join(', ')}</span>
                             )}
                             {g.seller && (
-                              <span className="text-accent-600">{g.seller.isHouseStore ? 'Sold & shipped by MarketBD' : `Sold by ${g.seller.shopName}`}</span>
+                              <span className="text-accent-600">{g.seller.isHouseStore ? `Sold & shipped by ${BRAND.name}` : `Sold by ${g.seller.shopName}`}</span>
                             )}
                           </p>
                         </div>
@@ -305,7 +306,7 @@ function Checkout() {
           )}
 
           <div className="mt-4">
-            <p className="mb-2 text-sm font-semibold">Have a MarketBD Coupon?</p>
+            <p className="mb-2 text-sm font-semibold">Have a {BRAND.name} Coupon?</p>
             <form
               className="flex overflow-hidden rounded-lg border border-ink-200 focus-within:border-primary-600"
               onSubmit={(e) => {
@@ -341,7 +342,7 @@ function Checkout() {
               I agree to the{' '}
               <Link href="/help/terms" className="text-primary-700 hover:underline">Terms &amp; Conditions</Link>,{' '}
               <Link href="/help/privacy" className="text-primary-700 hover:underline">Privacy Policy</Link> and{' '}
-              <Link href="/help/returns" className="text-primary-700 hover:underline">Return &amp; Refund Policy</Link> of MarketBD
+              <Link href="/help/returns" className="text-primary-700 hover:underline">Return &amp; Refund Policy</Link> of {BRAND.name}
             </span>
           </label>
 
@@ -359,13 +360,13 @@ function Checkout() {
 
         <div className="space-y-2.5 px-1 text-sm text-ink-600">
           <p className="flex items-center gap-2 font-semibold text-success">
-            <ShieldCheck className="size-5" /> MarketBD protects your payment information
+            <ShieldCheck className="size-5" /> {BRAND.name} protects your payment information
           </p>
           {[
             'Card payments go through a PCI DSS compliant gateway',
             'Card information is secure and uncompromised',
             'All data is encrypted',
-            'MarketBD never sells your payment information',
+            `${BRAND.name} never sells your payment information`,
           ].map((line) => (
             <p key={line} className="flex gap-2">
               <Check className="mt-0.5 size-4 shrink-0 text-success" /> {line}

@@ -66,7 +66,7 @@ export default function AddressesPage() {
           />
         </div>
       ) : (
-        <ul className="grid gap-4 xl:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {data.map((a) => (
             <li key={a.id} className="rounded-lg bg-white p-4 shadow-card">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

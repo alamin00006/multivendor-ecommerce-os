@@ -30,3 +30,22 @@ export const aggregateStatus = (statuses: readonly OrderStatus[]): OrderStatus =
   if (inFlow.length === 0) return active[0] ?? 'PENDING';
   return inFlow.reduce((min, s) => (FLOW.indexOf(s) < FLOW.indexOf(min) ? s : min));
 };
+
+/**
+ * Courier updates walk a package one step forward along fulfilment, or cancel it when the
+ * parcel comes back undelivered (also after it was handed over).
+ */
+export const canCourierTransition = (from: OrderStatus, to: OrderStatus): boolean => {
+  if (to === 'CANCELLED') return from === 'CONFIRMED' || from === 'PROCESSING' || from === 'SHIPPED';
+  const a = FLOW.indexOf(from);
+  return a >= 1 && FLOW.indexOf(to) === a + 1;
+};
+
+/** Statuses a courier walks through to reach `to` from `from`; empty when it cannot. */
+export const courierPath = (from: OrderStatus, to: OrderStatus): OrderStatus[] => {
+  if (to === 'CANCELLED') return canCourierTransition(from, to) ? ['CANCELLED'] : [];
+  const a = FLOW.indexOf(from);
+  const b = FLOW.indexOf(to);
+  if (a < 1 || b <= a) return [];
+  return FLOW.slice(a + 1, b + 1);
+};

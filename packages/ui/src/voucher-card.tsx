@@ -1,5 +1,6 @@
 'use client';
 
+import { BRAND } from '@marketbd/shared';
 import type { CouponView, PaymentMethod } from '@marketbd/shared';
 import { Clock, CreditCard, Loader2, ShoppingBag, Smartphone, Store, Truck } from 'lucide-react';
 import Image from 'next/image';
@@ -30,7 +31,7 @@ export const voucherKind = (v: CouponView) =>
       ? `Storewide · ${v.seller?.shopName ?? 'Shop'}`
       : v.scope === 'PAYMENT' && v.paymentMethod
         ? `Payment · ${METHOD_LABEL[v.paymentMethod]}`
-        : 'MarketBD Voucher';
+        : `${BRAND.name} Voucher`;
 
 /** Where "Use Now" sends the customer. */
 export const voucherUseHref = (v: CouponView) => (v.scope === 'STORE' && v.seller ? `/shop/${v.seller.slug}` : '/cart');

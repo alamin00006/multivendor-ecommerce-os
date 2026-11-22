@@ -12,6 +12,7 @@ import {
   useUpdateCartItemMutation,
   useWishlistToggle,
 } from '@marketbd/api-client';
+import { BRAND } from '@marketbd/shared';
 import type { SellerSummary } from '@marketbd/shared';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -246,7 +247,7 @@ export default function CartScreen() {
                       </View>
                     ) : null}
                     {l.seller && showSellerInfo ? (
-                      <Text className="text-sm text-accent-600">{l.seller.isHouseStore ? 'Fulfilled by MarketBD' : `Sold by ${l.seller.shopName}`}</Text>
+                      <Text className="text-sm text-accent-600">{l.seller.isHouseStore ? `Fulfilled by ${BRAND.name}` : `Sold by ${l.seller.shopName}`}</Text>
                     ) : null}
                     {l.reason ? <Text className="text-sm text-danger">{l.reason}</Text> : null}
                     <View className="flex-row items-center justify-between">

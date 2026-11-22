@@ -15,6 +15,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { Provider, useDispatch } from 'react-redux';
 import { getCurrentLocale } from '@/i18n';
 import { API_URL } from './config';
+import { usePushNotifications } from './push';
 
 const REFRESH_KEY = 'mbd_refresh_token';
 const GUEST_CART_KEY = 'mbd_guest_cart';
@@ -39,6 +40,7 @@ function SessionBootstrap() {
   useGuestCartMerge();
   // Chat Socket.IO lives on the API origin (API_URL without the /api/v1 prefix).
   useChatRealtime(API_URL.replace(/\/api\/v1$/, ''));
+  usePushNotifications();
   return null;
 }
 

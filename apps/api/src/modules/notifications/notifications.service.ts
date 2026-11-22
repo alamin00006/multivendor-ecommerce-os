@@ -4,6 +4,7 @@ import type { z } from 'zod';
 import type { Notification } from '../../generated/prisma/client.js';
 import { PaginatedResult, skipTake } from '../../common/pagination.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { PushService } from './push.service.js';
 
 const toView = (n: Notification): NotificationView => ({
   id: n.id,
@@ -17,7 +18,10 @@ const toView = (n: Notification): NotificationView => ({
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly push: PushService,
+  ) {}
 
   async notify(
     userId: string,
@@ -27,6 +31,8 @@ export class NotificationsService {
     data?: Record<string, string>,
   ): Promise<void> {
     await this.prisma.notification.create({ data: { userId, type, title, body, data } });
+    // Phone notification in the background; never delays or fails the caller.
+    void this.push.send(userId, title, body, data);
   }
 
   async list(userId: string, query: z.infer<typeof NotificationListQuerySchema>) {

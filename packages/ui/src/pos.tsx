@@ -317,7 +317,7 @@ export function PosTerminal({ scope, salesHref, description }: { scope: PosScope
           </Link>
         }
       />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
         <section className="min-w-0">
           <form onSubmit={onSearch} className="card mb-3 flex items-center gap-2 p-2">
             <Search className="ml-1 size-5 shrink-0 text-ink-400" />

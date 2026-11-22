@@ -8,6 +8,8 @@ The brand name lives in one constant, `BRAND` in [packages/shared/src/constants.
 |---|---|---|
 | API | NestJS 12, Prisma 7, PostgreSQL 17, Zod (`nestjs-zod`) | [apps/api](apps/api) |
 | Web | Next.js 16 App Router, Redux Toolkit + RTK Query, Tailwind CSS 4 | [apps/web](apps/web) |
+| Admin | Next.js 16 admin panel (same stack as Web) | [apps/admin](apps/admin) |
+| Seller Center | Next.js 16 seller/partner panel (same stack as Web) | [apps/partner-admin](apps/partner-admin) |
 | Mobile | Expo SDK 56 + Expo Router, RTK Query, NativeWind | [apps/mobile](apps/mobile) |
 | Shared | Zod schemas, types, enums, BDT formatting, BD geo data, EN/BN UI strings | [packages/shared](packages/shared) |
 | API client | RTK Query base API (refresh on 401), every endpoint, `useMarketplaceMode()` | [packages/api-client](packages/api-client) |
@@ -27,6 +29,8 @@ pnpm db:up                                # PostgreSQL on :5440, MinIO on :9000 
 
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
+cp apps/admin/.env.example apps/admin/.env.local
+cp apps/partner-admin/.env.example apps/partner-admin/.env.local
 cp apps/mobile/.env.example apps/mobile/.env
 
 pnpm --filter @marketbd/shared build      # shared packages are consumed from dist/
@@ -42,6 +46,8 @@ Then start each app in its own terminal:
 ```bash
 pnpm --filter @marketbd/api dev           # http://localhost:4000/api/v1  · Swagger: http://localhost:4000/docs
 pnpm --filter @marketbd/web dev           # http://localhost:3100
+pnpm --filter @marketbd/admin dev         # http://localhost:3101
+pnpm --filter @marketbd/partner-admin dev # http://localhost:3102  (Seller Center)
 pnpm --filter @marketbd/mobile start      # Expo dev server → press a (Android) / i (iOS)
 ```
 
@@ -79,7 +85,7 @@ The admin turns the mode on or off at **Admin → Settings**. The change needs n
 
 - **Source of truth:** the `PlatformSetting` row. `MULTI_VENDOR_ENABLED` is read only on the first seed.
 - **API:** all mode logic lives in `PlatformModeService`. `@RequireMultiVendor()` (enforced by `MultiVendorGuard`) returns 403 on seller endpoints when the mode is OFF.
-- **Web and mobile:** both read the mode with `useMarketplaceMode()` from `@marketbd/api-client`. The web also reads it at server render. `apps/web/proxy.ts` redirects `/seller`, `/sell` and `/shop/*` when the mode is OFF.
+- **Web and mobile:** both read the mode with `useMarketplaceMode()` from `@marketbd/api-client`. The web also reads it at server render. `apps/web/proxy.ts` redirects `/sell` and `/shop/*` when the mode is OFF, and `apps/partner-admin/proxy.ts` sends the whole Seller Center to the storefront.
 - **When OFF:**
   - Only house-store products are listed. Other sellers' products are hidden, not deleted.
   - Seller names, "Sold by" blocks and seller ratings disappear from the storefront.
@@ -110,6 +116,16 @@ The admin turns the mode on or off at **Admin → Settings**. The change needs n
   - **My Voucher:** see collected vouchers in **Account → My Voucher** (Available / Used / Expired).
   - **Checkout:** apply one voucher per order. The list shows collected vouchers first and explains blockers such as "Add ৳X more" or "Pay with bKash".
 - **Visibility:** store vouchers follow their shop's visibility, so they are hidden in single-vendor mode. The database enforces that store vouchers have a shop and payment vouchers have a method.
+
+## Courier delivery (multiple couriers)
+
+Couriers are managed by the admin in **Admin → Couriers**: switch each one on, enter its API credentials (stored AES-256-GCM encrypted with `DATA_ENCRYPTION_KEY`), press **Test connection**, and paste the shown webhook URL and secret into the courier's panel. Supported now: **Pathao** and **Steadfast**.
+
+- **Pathao** (per-seller pickup): each seller is a Pathao store, so the rider collects from the seller's own address. Sellers set it in **Seller Center → Courier**; the admin sets the house store's on the Couriers page. City, zone and area come from Pathao's location lists; a new store can take about an hour to be approved. Has a sandbox switch.
+- **Steadfast** (account pickup): no per-seller stores. Parcels are collected from the pickup address on the Steadfast account (for example a hub or the house store).
+- **Booking:** on a confirmed package, pick a courier and **Book** (Seller Center order page, or Admin order page for any shop). COD packages collect the package total; prepaid packages collect 0. The tracking code becomes the package's tracking number and the package moves to *Processing*.
+- **Status:** webhooks at `<API_PUBLIC_URL>/api/v1/webhooks/<courier>` and a 15-minute sync for packages that have not heard back in 20 minutes; **Refresh status** syncs one package. Picked/in transit → *Shipped*; delivered → *Delivered* (COD marked paid); returned after hand-over → *Cancelled* with stock restored; cancelled before hand-over → the booking ends and the package can be booked again.
+- **Adding a courier:** add its entry (name, credential fields) to `COURIER_CATALOG` in [packages/shared/src/schemas/shipping.ts](packages/shared/src/schemas/shipping.ts), write an adapter implementing `CourierAdapter` in [apps/api/src/modules/shipping/couriers](apps/api/src/modules/shipping/couriers), register it in `courier.registry.ts`, and add the value to the `CourierProvider` enum in the Prisma schema. The admin form, seller settings and booking panel pick it up automatically.
 
 ## Customer ↔ seller chat
 

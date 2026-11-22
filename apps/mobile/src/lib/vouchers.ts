@@ -1,3 +1,4 @@
+import { BRAND } from '@marketbd/shared';
 import type { CouponView, PaymentMethod } from '@marketbd/shared';
 
 const METHOD: Record<PaymentMethod, string> = { COD: 'Cash on Delivery', BKASH: 'bKash', SSLCOMMERZ: 'Card & mobile banking', CASH: 'Cash' };
@@ -12,7 +13,7 @@ export const voucherKind = (v: CouponView) =>
       ? `Storewide · ${v.seller?.shopName ?? 'Shop'}`
       : v.scope === 'PAYMENT' && v.paymentMethod
         ? `Payment · ${METHOD[v.paymentMethod]}`
-        : 'MarketBD Voucher';
+        : `${BRAND.name} Voucher`;
 
 /** "10% off", "৳50 off", "Free delivery" or "৳60 off delivery". */
 export const voucherAmount = (v: CouponView, money: (poisha: number) => string) =>

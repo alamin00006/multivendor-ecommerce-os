@@ -1,6 +1,7 @@
 'use client';
 
 import { selectUser, useAvailableCouponsQuery } from '@marketbd/api-client';
+import { BRAND } from '@marketbd/shared';
 import type { CouponScope, CouponView } from '@marketbd/shared';
 import { Ticket } from 'lucide-react';
 import { useState } from 'react';
@@ -9,7 +10,7 @@ import { cn, EmptyState, Skeleton, VoucherCard } from '@marketbd/ui';
 import { useCollectVoucher } from '@/components/account/use-collect';
 
 const SECTIONS: { scope: CouponScope; tab: string; title: string }[] = [
-  { scope: 'PLATFORM', tab: 'MarketBD', title: 'MarketBD Vouchers' },
+  { scope: 'PLATFORM', tab: BRAND.name, title: `${BRAND.name} Vouchers` },
   { scope: 'STORE', tab: 'Store', title: 'Store Vouchers' },
   { scope: 'PAYMENT', tab: 'Payment', title: 'Payment Vouchers' },
 ];
@@ -20,7 +21,7 @@ function Section({ title, vouchers }: { title: string; vouchers: CouponView[] })
   return (
     <section>
       <h2 className="mb-4 border-b border-ink-100 pb-2 text-lg font-semibold text-ink-900">{title}</h2>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {vouchers.map((v) => (
           <VoucherCard key={v.id} voucher={v} onCollect={() => void onCollect(v.id)} collecting={busyId === v.id} />
         ))}

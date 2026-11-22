@@ -1,9 +1,9 @@
 /** Brand + platform constants. Rename the marketplace by changing BRAND only. */
 export const BRAND = {
-  name: 'MarketBD',
-  nameBn: 'মার্কেটবিডি',
-  tagline: 'Everything you need, delivered across Bangladesh',
-  taglineBn: 'সারা বাংলাদেশে আপনার প্রয়োজনীয় সবকিছু',
+  name: 'AroLagbe',
+  nameBn: 'আরওলাগবে',
+  tagline: 'Whatever you need, find it on AroLagbe',
+  taglineBn: 'যা লাগবে, আরওলাগবে-তে',
   supportEmail: 'support@marketbd.example',
   supportPhone: '+8809600000000',
   deepLinkScheme: 'marketbd',

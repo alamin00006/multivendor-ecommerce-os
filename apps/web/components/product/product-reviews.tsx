@@ -18,7 +18,7 @@ export function ProductReviews({ productId }: { productId: string }) {
     <section id="reviews" className="card scroll-mt-48 p-4">
       <h2 className="mb-4 font-semibold">{t.product.ratingsReviews}</h2>
       {summary && summary.count > 0 ? (
-        <div className="mb-5 grid gap-6 border-b border-ink-100 pb-5 sm:grid-cols-[180px_1fr]">
+        <div className="mb-5 grid grid-cols-1 gap-6 border-b border-ink-100 pb-5 sm:grid-cols-[180px_1fr]">
           <div className="text-center sm:text-left">
             <p className="text-4xl font-bold">
               {summary.average.toFixed(1)}

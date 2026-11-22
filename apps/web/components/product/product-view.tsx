@@ -464,7 +464,7 @@ export function ProductView({ product }: { product: ProductDetail }) {
 
   return (
     <div className="space-y-4 pb-20 md:pb-0">
-      <div id="overview" className="card grid scroll-mt-48 gap-6 p-4 md:grid-cols-2 md:p-5 lg:grid-cols-[minmax(0,1fr)_520px]">
+      <div id="overview" className="card grid scroll-mt-48 grid-cols-1 gap-6 p-4 md:grid-cols-2 md:p-5 lg:grid-cols-[minmax(0,1fr)_520px]">
         <Gallery product={product} variantId={purchase.variant?.id ?? null} />
         <ProductInfo product={product} purchase={purchase} />
       </div>
@@ -485,7 +485,7 @@ export function ProductView({ product }: { product: ProductDetail }) {
         ))}
       </nav>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
         <div className="min-w-0 space-y-4">
           <section id="details" className="card scroll-mt-48 p-5">
             <h2 className="mb-3 font-semibold text-ink-900">Product Details</h2>
@@ -516,9 +516,9 @@ export function ProductView({ product }: { product: ProductDetail }) {
             <h2 className="mb-3 font-semibold text-ink-900">Specifications</h2>
             <dl className="divide-y divide-ink-100 rounded-lg border border-ink-100 text-sm">
               {product.brand && (
-                <div className="grid grid-cols-[160px_1fr] px-3 py-2"><dt className="text-ink-500">{t.product.brand}</dt><dd>{product.brand.name}</dd></div>
+                <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-2 break-words px-3 py-2 sm:grid-cols-[160px_minmax(0,1fr)]"><dt className="text-ink-500">{t.product.brand}</dt><dd>{product.brand.name}</dd></div>
               )}
-              <div className="grid grid-cols-[160px_1fr] px-3 py-2">
+              <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-2 break-words px-3 py-2 sm:grid-cols-[160px_minmax(0,1fr)]">
                 <dt className="text-ink-500">{t.product.category}</dt>
                 <dd>
                   <Link href={`/c/${product.category.slug}`} className="text-primary-700 hover:underline">
@@ -526,20 +526,20 @@ export function ProductView({ product }: { product: ProductDetail }) {
                   </Link>
                 </dd>
               </div>
-              <div className="grid grid-cols-[160px_1fr] px-3 py-2"><dt className="text-ink-500">{t.product.sku}</dt><dd>{purchase.variant?.sku ?? product.variants[0]?.sku}</dd></div>
+              <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-2 break-words px-3 py-2 sm:grid-cols-[160px_minmax(0,1fr)]"><dt className="text-ink-500">{t.product.sku}</dt><dd>{purchase.variant?.sku ?? product.variants[0]?.sku}</dd></div>
               {optionKeys.map((k) => (
-                <div key={k} className="grid grid-cols-[160px_1fr] px-3 py-2">
+                <div key={k} className="grid grid-cols-[110px_minmax(0,1fr)] gap-2 break-words px-3 py-2 sm:grid-cols-[160px_minmax(0,1fr)]">
                   <dt className="capitalize text-ink-500">{k}</dt>
                   <dd>{product.options[k]!.join(', ')}</dd>
                 </div>
               ))}
               {product.specifications.map((row) => (
-                <div key={row.label} className="grid grid-cols-[160px_1fr] px-3 py-2">
+                <div key={row.label} className="grid grid-cols-[110px_minmax(0,1fr)] gap-2 break-words px-3 py-2 sm:grid-cols-[160px_minmax(0,1fr)]">
                   <dt className="text-ink-500">{row.label}</dt>
                   <dd className="whitespace-pre-line">{row.value}</dd>
                 </div>
               ))}
-              <div className="grid grid-cols-[160px_1fr] px-3 py-2">
+              <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-2 break-words px-3 py-2 sm:grid-cols-[160px_minmax(0,1fr)]">
                 <dt className="text-ink-500">Warranty</dt>
                 <dd>{product.warranty ?? 'No warranty'}</dd>
               </div>

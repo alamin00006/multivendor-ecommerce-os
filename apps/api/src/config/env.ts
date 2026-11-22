@@ -53,6 +53,19 @@ const EnvSchema = z.object({
   SSLCOMMERZ_STORE_ID: z.string().default(''),
   SSLCOMMERZ_STORE_PASSWORD: z.string().default(''),
 
+  /**
+   * Key for encrypting secrets stored in the database (courier credentials). Any long random string.
+   * Falls back to a key derived from JWT_REFRESH_SECRET outside production.
+   */
+  DATA_ENCRYPTION_KEY: z.string().default(''),
+  /** Value Pathao expects back in X-Pathao-Merchant-Webhook-Integration-Secret when its webhook is registered. */
+  PATHAO_WEBHOOK_INTEGRATION_SECRET: z.string().default('f3992ecc-59da-4cbe-a049-a13da2018d51'),
+
+  /** Expo push service (mobile notifications). Off by default; an access token is optional. */
+  PUSH_ENABLED: bool,
+  EXPO_PUSH_URL: z.string().url().default('https://exp.host/--/api/v2/push/send'),
+  EXPO_ACCESS_TOKEN: z.string().default(''),
+
   OBSERVE_APP_KEY: z.string().default(''),
   OBSERVE_APP_SECRET: z.string().default(''),
 });
@@ -67,3 +80,7 @@ if (!parsed.success) {
 
 export const env: Env = parsed.data;
 export const isProduction = env.NODE_ENV === 'production';
+
+if (isProduction && env.DATA_ENCRYPTION_KEY.length < 32) {
+  throw new Error('Invalid environment configuration:\n  DATA_ENCRYPTION_KEY: set at least 32 random characters in production');
+}

@@ -56,6 +56,7 @@ export const TAG_TYPES = [
   'AdminCoupons',
   'AdminCategories',
   'AdminBrands',
+  'Courier',
 ] as const;
 
 const rawBaseQuery = fetchBaseQuery({

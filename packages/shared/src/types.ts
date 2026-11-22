@@ -356,6 +356,8 @@ export interface SubOrderView {
   commissionRate: number;
   commissionAmount: number;
   trackingNumber: string | null;
+  /** Latest courier booking for this package, if any. */
+  shipment: ShipmentView | null;
   items: OrderItemView[];
   history: StatusEvent[];
 }
@@ -463,6 +465,8 @@ export interface SellerOrderView {
   total: number;
   commissionAmount: number;
   trackingNumber: string | null;
+  /** Latest courier booking for this package, if any. */
+  shipment: ShipmentView | null;
   shippingAddress: ShippingAddressSnapshot;
   items: OrderItemView[];
   history: StatusEvent[];
@@ -864,4 +868,74 @@ export interface SellerReport {
 export interface BulkStockResult {
   updated: number;
   errors: Array<{ row: number; sku: string; message: string }>;
+}
+
+// ───── Courier / shipping ─────
+
+export type CourierProvider = 'PATHAO' | 'STEADFAST';
+
+export interface CourierLocation {
+  id: number;
+  name: string;
+}
+
+export interface CourierStoreView {
+  provider: CourierProvider;
+  name: string;
+  contactName: string;
+  contactNumber: string;
+  address: string;
+  cityId: number;
+  zoneId: number;
+  areaId: number;
+  /** False while the courier is still approving the new pickup store. */
+  ready: boolean;
+}
+
+/** A courier a seller (or the admin, for the house store) can book with. */
+export interface CourierOption {
+  provider: CourierProvider;
+  name: string;
+  supportsStores: boolean;
+  needsWeight: boolean;
+  note: string | null;
+  /** Pickup store of this shop; always null for couriers without stores. */
+  store: CourierStoreView | null;
+  /** Can book right now (store approved, or the courier needs no store). */
+  ready: boolean;
+}
+
+/** Admin view of one courier account. Secret credentials are never returned, only whether they are set. */
+export interface CourierAccountView {
+  provider: CourierProvider;
+  name: string;
+  enabled: boolean;
+  sandbox: boolean;
+  hasSandbox: boolean;
+  supportsStores: boolean;
+  /** Non-secret values as saved; secret keys map to null. */
+  credentials: Record<string, string | null>;
+  /** Credential keys that have a saved value. */
+  configured: string[];
+  webhookUrl: string;
+  webhookSecret: string;
+  updatedAt: IsoDate | null;
+}
+
+export interface ShipmentView {
+  id: string;
+  provider: CourierProvider;
+  consignmentId: string;
+  /** Customer-facing tracking code (Steadfast) or the consignment id. */
+  trackingCode: string;
+  merchantOrderId: string;
+  /** Raw courier status, e.g. "order.picked" or "delivered". */
+  courierStatus: string;
+  /** False after the courier cancelled the booking; the package can be booked again. */
+  active: boolean;
+  codAmount: number;
+  deliveryFee: number | null;
+  collectedAmount: number | null;
+  createdAt: IsoDate;
+  updatedAt: IsoDate;
 }

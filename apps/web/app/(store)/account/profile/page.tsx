@@ -51,7 +51,7 @@ export default function ProfilePage() {
       <div className="rounded-lg bg-white p-5 shadow-card md:p-6">
         {mode === 'view' && (
           <>
-            <div className="grid gap-6 md:grid-cols-2 md:divide-x md:divide-ink-100">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:divide-x md:divide-ink-100">
               <div className="space-y-5">
                 <Item label="Full Name" value={user?.name} />
                 <Item label="Birthday" value={user?.birthday ? formatBirthday(user.birthday) : null} />
@@ -75,7 +75,7 @@ export default function ProfilePage() {
 
         {mode === 'edit' && (
           <form
-            className="grid max-w-2xl gap-4 sm:grid-cols-2"
+            className="grid grid-cols-1 max-w-2xl gap-4 sm:grid-cols-2"
             onSubmit={profile.handleSubmit(async (v) => {
               try {
                 await updateProfile({

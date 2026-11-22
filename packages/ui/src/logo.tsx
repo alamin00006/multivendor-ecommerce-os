@@ -1,21 +1,35 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { BRAND } from '@marketbd/shared';
 
 /**
- * Placeholder brand mark — swap the SVG for the real logo. Name comes from BRAND;
- * colours follow the brand colours set in Admin → Settings (CSS variables).
+ * Brand logo. The image files live in each Next app's public/brand/ folder:
+ * logo.png (wordmark), logo-light.png (for dark backgrounds) and logo-full.png (with the tagline).
  */
-export function Logo({ className = '', light = false }: { className?: string; light?: boolean }) {
+export function Logo({
+  className = '',
+  light = false,
+  withTagline = false,
+}: {
+  className?: string;
+  /** White wordmark for dark backgrounds (panel sidebar). */
+  light?: boolean;
+  /** Wordmark + "যা লাগবে, আরওলাগবে-তে" underneath. */
+  withTagline?: boolean;
+}) {
+  const src = withTagline ? '/brand/logo-full.png' : light ? '/brand/logo-light.png' : '/brand/logo.png';
+  const [w, h] = withTagline ? [719, 215] : [719, 131];
   return (
-    <Link href="/" className={`inline-flex items-center gap-2 ${className}`} aria-label={`${BRAND.name} home`}>
-      <svg viewBox="0 0 64 64" className="size-8 shrink-0" aria-hidden>
-        <rect width="64" height="64" rx="14" fill={light ? '#ffffff' : 'var(--color-primary-700)'} />
-        <path d="M16 44V22l8 0 8 12 8-12h8v22h-7V32l-9 12-9-12v12z" fill={light ? 'var(--color-primary-700)' : '#ffffff'} />
-        <circle cx="50" cy="16" r="5" fill="var(--color-accent-500)" />
-      </svg>
-      <span className={`font-display text-xl font-bold tracking-tight ${light ? 'text-white' : 'text-primary-800'}`}>
-        {BRAND.name}
-      </span>
+    <Link href="/" className={`inline-flex shrink-0 items-center ${className}`} aria-label={`${BRAND.name} home`}>
+      <Image
+        src={src}
+        alt={BRAND.nameBn}
+        width={w}
+        height={h}
+        priority
+        unoptimized
+        className={withTagline ? 'h-16 w-auto' : 'h-7 w-auto sm:h-8'}
+      />
     </Link>
   );
 }

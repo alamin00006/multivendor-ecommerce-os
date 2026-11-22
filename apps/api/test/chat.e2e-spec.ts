@@ -1,7 +1,7 @@
 import type { AddressInfo } from 'node:net';
 import { io, type Socket } from 'socket.io-client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { ChatMessageView, ChatThread, ConversationView } from '@marketbd/shared';
+import { BRAND, type ChatMessageView, type ChatThread, type ConversationView } from '@marketbd/shared';
 import { API, createTestApp, login, setMultiVendor, type TestContext } from './helpers.js';
 
 interface Envelope<T> {
@@ -135,7 +135,7 @@ describe('Customer ↔ seller chat (e2e)', () => {
     const visible = (list.body as Envelope<ConversationView[]>).data;
     expect(visible.every((c) => c.shop.isHouseStore)).toBe(true);
     // The store shows under the brand name, and marketplace sellers are locked out of chat.
-    expect(visible[0]?.shop.name).toBe('MarketBD');
+    expect(visible[0]?.shop.name).toBe(BRAND.name);
     await ctx.http().get(`${API}/seller/chat/conversations`).set(auth(gadgetSeller)).expect(403);
     await setMultiVendor(ctx, admin, true);
   });

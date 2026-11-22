@@ -8,7 +8,9 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.marketbd.app"
@@ -33,6 +35,20 @@
         {
           "image": "./assets/splash.png",
           "backgroundColor": "#08755a"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#08755a",
+          "defaultChannel": "default"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow MarketBD to use your photos so you can attach them to returns and reviews.",
+          "cameraPermission": "Allow MarketBD to use your camera so you can photograph items for returns."
         }
       ]
     ],

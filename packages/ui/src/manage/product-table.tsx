@@ -46,7 +46,7 @@ export function ProductTable({ scope }: { scope: 'seller' | 'admin' }) {
         actions={
           <>
             {scope === 'seller' && (
-              <ButtonLink href="/seller/products/bulk" variant="outline">
+              <ButtonLink href="/products/bulk" variant="outline">
                 <FileSpreadsheet className="size-4" /> Bulk price & stock
               </ButtonLink>
             )}

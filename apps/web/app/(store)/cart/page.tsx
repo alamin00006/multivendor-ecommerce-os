@@ -17,6 +17,7 @@ import {
   useUpdateCartItemMutation,
   useWishlistToggle,
 } from '@marketbd/api-client';
+import { BRAND } from '@marketbd/shared';
 import type { CartItemView, SellerSummary } from '@marketbd/shared';
 import { BadgeCheck, Heart, Info, ShoppingCart, Store, Trash2 } from 'lucide-react';
 import Image from 'next/image';
@@ -116,7 +117,7 @@ function CartLine({
         </Link>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-500">
           {line.attributes.length > 0 && <span>• {line.attributes.join(', ')}</span>}
-          {showSeller && line.seller && <span className="text-success">Fulfilled by {line.seller.isHouseStore ? 'MarketBD' : 'Seller'}</span>}
+          {showSeller && line.seller && <span className="text-success">Fulfilled by {line.seller.isHouseStore ? BRAND.name : 'Seller'}</span>}
         </div>
         {line.reason && <Badge tone="danger">{line.reason}</Badge>}
         <div className="flex flex-wrap items-center gap-3 pt-0.5">
@@ -267,7 +268,7 @@ export default function CartPage() {
   return (
     <div className="container-site pt-3">
       <Breadcrumbs items={[{ label: t.common.cart }]} />
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="card p-4">
           <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-2">
             <h1 className="font-semibold text-ink-900">Order items ({lines.length})</h1>

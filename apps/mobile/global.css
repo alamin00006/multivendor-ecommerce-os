@@ -1,3 +1,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Brand colours as RGB channels. The app overrides them at runtime from Admin -> Settings (see src/lib/brand-theme.tsx). */
+:root {
+  --color-primary-50: 236 253 246;
+  --color-primary-100: 209 250 234;
+  --color-primary-200: 166 243 214;
+  --color-primary-300: 109 230 189;
+  --color-primary-400: 52 207 158;
+  --color-primary-500: 16 180 132;
+  --color-primary-600: 7 146 108;
+  --color-primary-700: 8 117 90;
+  --color-primary-800: 11 93 73;
+  --color-primary-900: 11 76 61;
+  --color-primary-950: 3 43 35;
+  --color-accent-50: 255 244 241;
+  --color-accent-100: 255 230 223;
+  --color-accent-200: 255 208 196;
+  --color-accent-300: 255 174 154;
+  --color-accent-400: 253 127 97;
+  --color-accent-500: 245 90 54;
+  --color-accent-600: 226 61 24;
+  --color-accent-700: 190 48 17;
+  --color-accent-800: 156 43 19;
+  --color-accent-900: 129 41 23;
+  --color-accent-950: 70 17 7;
+}

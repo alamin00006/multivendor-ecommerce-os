@@ -4,7 +4,7 @@ const API = `${process.env.API_INTERNAL_URL ?? 'http://localhost:4000'}/api/v1`;
 const TTL_MS = 15_000;
 let cached: { value: boolean; at: number } | null = null;
 
-/** Optimistic mode check: seller pages are unreachable while the store runs in single-vendor mode. */
+/** Optimistic mode check: seller-facing storefront pages are unreachable while the store runs in single-vendor mode. */
 async function multiVendorEnabled(): Promise<boolean> {
   if (cached && Date.now() - cached.at < TTL_MS) return cached.value;
   try {
@@ -29,5 +29,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/seller/:path*', '/sell', '/shop/:path*'],
+  matcher: ['/sell', '/shop/:path*'],
 };

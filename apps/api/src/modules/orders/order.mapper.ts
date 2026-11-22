@@ -4,10 +4,11 @@ import {
   type OrderItemView,
   type OrderSummary,
   type SellerOrderView,
+  type ShipmentView,
   type ShippingAddressSnapshot,
   type StatusEvent,
 } from '@marketbd/shared';
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { Prisma, Shipment } from '../../generated/prisma/client.js';
 import { num } from '../../common/utils.js';
 import { sellerSummarySelect, toSellerSummary } from '../products/product.mapper.js';
 
@@ -78,6 +79,26 @@ export const toOrderSummary = (o: OrderSummaryRow, withCustomer = false): OrderS
   createdAt: o.createdAt.toISOString(),
 });
 
+/** Only the newest courier booking of a package is shown. */
+export const latestShipment = { orderBy: { createdAt: 'desc' }, take: 1 } satisfies Prisma.ShipmentFindManyArgs;
+
+export const toShipmentView = (s: Shipment): ShipmentView => ({
+  id: s.id,
+  provider: s.provider,
+  consignmentId: s.consignmentId,
+  trackingCode: s.trackingCode ?? s.consignmentId,
+  merchantOrderId: s.merchantOrderId,
+  courierStatus: s.courierStatus,
+  active: s.active,
+  codAmount: s.codAmount,
+  deliveryFee: s.deliveryFee,
+  collectedAmount: s.collectedAmount,
+  createdAt: s.createdAt.toISOString(),
+  updatedAt: s.updatedAt.toISOString(),
+});
+
+const firstShipment = (rows: Shipment[]): ShipmentView | null => (rows[0] ? toShipmentView(rows[0]) : null);
+
 export const orderDetailInclude = {
   ...orderSummaryInclude,
   subOrders: {
@@ -86,6 +107,7 @@ export const orderDetailInclude = {
       seller: { select: sellerSummarySelect },
       items: { include: orderItemInclude },
       history: { orderBy: { createdAt: 'asc' } },
+      shipments: latestShipment,
     },
   },
   history: { where: { subOrderId: null }, orderBy: { createdAt: 'asc' } },
@@ -137,6 +159,7 @@ export const toOrderDetail = (
     commissionRate: num(s.commissionRate),
     commissionAmount: s.commissionAmount,
     trackingNumber: s.trackingNumber,
+    shipment: firstShipment(s.shipments),
     items: s.items.map(toItemView),
     history: s.history.map(toEvent),
   })),
@@ -185,6 +208,7 @@ export const sellerOrderInclude = {
   },
   items: { include: orderItemInclude },
   history: { orderBy: { createdAt: 'asc' } },
+  shipments: latestShipment,
 } satisfies Prisma.SubOrderInclude;
 
 type SellerOrderRow = Prisma.SubOrderGetPayload<{ include: typeof sellerOrderInclude }>;
@@ -201,6 +225,7 @@ export const toSellerOrderView = (s: SellerOrderRow): SellerOrderView => ({
   total: s.total,
   commissionAmount: s.commissionAmount,
   trackingNumber: s.trackingNumber,
+  shipment: firstShipment(s.shipments),
   shippingAddress: asShippingAddress(s.order.shippingAddress),
   items: s.items.map(toItemView),
   history: s.history.map(toEvent),

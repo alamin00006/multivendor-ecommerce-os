@@ -7,3 +7,4 @@ export * from './merchandising.js';
 export * from './platform.js';
 export * from './chat.js';
 export * from './seller-business.js';
+export * from './shipping.js';

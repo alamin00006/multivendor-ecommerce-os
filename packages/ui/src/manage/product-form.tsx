@@ -151,7 +151,7 @@ export function ProductForm({ scope, product }: { scope: 'seller' | 'admin'; pro
 
   return (
     <div className="space-y-4">
-      <section className="card grid gap-4 p-5 md:grid-cols-2">
+      <section className="card grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
         <div className="md:col-span-2">
           <label className="label" htmlFor="title">Title</label>
           <input id="title" className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -199,7 +199,7 @@ export function ProductForm({ scope, product }: { scope: 'seller' | 'admin'; pro
         </div>
       </section>
 
-      <section className="card grid gap-5 p-5 lg:grid-cols-2">
+      <section className="card grid grid-cols-1 gap-5 p-5 lg:grid-cols-2">
         <div>
           <h3 className="mb-1 font-semibold">Key features</h3>
           <p className="mb-3 text-xs text-ink-500">Short bullet points shown on the product page.</p>

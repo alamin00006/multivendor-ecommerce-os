@@ -1,9 +1,9 @@
 import { errorMessage, selectUser, useCollectCouponMutation } from '@marketbd/api-client';
 import type { CouponView } from '@marketbd/shared';
 import { router } from 'expo-router';
-import { Ticket, X } from 'lucide-react-native';
+import { Mail, Phone, Ticket, X } from 'lucide-react-native';
 import { type ReactNode, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { colors } from '@/components/ui';
@@ -125,6 +125,26 @@ export function EmptyCard({ icon, title, text, shop = true }: { icon: ReactNode;
           <Text className="font-semibold text-white">Start Shopping</Text>
         </Pressable>
       ) : null}
+    </View>
+  );
+}
+
+/** Contact buttons (call / email) shared by the help screens. */
+export function ContactCard({ phone, email, hours }: { phone: string; email: string; hours: string }) {
+  return (
+    <View className="gap-2 rounded-xl bg-white p-4">
+      <Text className="text-base font-bold text-ink-900">Contact us</Text>
+      <Text className="text-xs text-ink-500">{hours}</Text>
+      <View className="flex-row gap-2">
+        <Pressable onPress={() => void Linking.openURL(`tel:${phone}`)} className="flex-1 flex-row items-center justify-center gap-2 rounded-lg bg-primary-700 py-3">
+          <Phone size={18} color="#fff" />
+          <Text className="font-semibold text-white">Call</Text>
+        </Pressable>
+        <Pressable onPress={() => void Linking.openURL(`mailto:${email}`)} className="flex-1 flex-row items-center justify-center gap-2 rounded-lg border border-primary-700 py-3">
+          <Mail size={18} color={colors.primary} />
+          <Text className="font-semibold text-primary-700">Email</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

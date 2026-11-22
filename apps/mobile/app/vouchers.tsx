@@ -1,4 +1,5 @@
 import { selectUser, useAvailableCouponsQuery } from '@marketbd/api-client';
+import { BRAND } from '@marketbd/shared';
 import type { CouponScope } from '@marketbd/shared';
 import { router, Stack } from 'expo-router';
 import { Ticket, Wallet } from 'lucide-react-native';
@@ -10,7 +11,7 @@ import { colors, Loading } from '@/components/ui';
 
 type Tab = 'ALL' | CouponScope;
 const SECTIONS: { scope: CouponScope; tab: string; title: string }[] = [
-  { scope: 'PLATFORM', tab: 'MarketBD', title: 'MarketBD Vouchers' },
+  { scope: 'PLATFORM', tab: BRAND.name, title: `${BRAND.name} Vouchers` },
   { scope: 'STORE', tab: 'Store', title: 'Store Vouchers' },
   { scope: 'PAYMENT', tab: 'Payment', title: 'Payment Vouchers' },
 ];

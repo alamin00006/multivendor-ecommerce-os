@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useSelector } from 'react-redux';
 import { useI18n, EmptyState, OrderStatusBadge, Skeleton } from '@marketbd/ui';
+import { MobileAccount } from '@/components/account/mobile-account';
 
 function Panel({ title, edit, children }: { title: string; edit: string; children: React.ReactNode }) {
   return (
@@ -32,10 +33,15 @@ export default function AccountOverviewPage() {
   const address = addresses?.find((a) => a.isDefault) ?? addresses?.[0];
 
   return (
-    <div className="rounded-lg bg-white p-5 shadow-card md:p-6">
+    <>
+      {/* Phones and tablets: app-style account home. */}
+      <div className="lg:hidden">
+        <MobileAccount />
+      </div>
+    <div className="hidden rounded-lg bg-white p-5 shadow-card md:p-6 lg:block">
       <h1 className="border-b border-ink-100 pb-4 text-2xl font-semibold text-ink-900">Manage My Account</h1>
 
-      <div className="grid gap-6 py-6 md:grid-cols-2 md:divide-x md:divide-ink-100">
+      <div className="grid grid-cols-1 gap-6 py-6 md:grid-cols-2 md:divide-x md:divide-ink-100">
         <Panel title="Personal Profile" edit="/account/profile">
           <p className="font-semibold text-ink-900">{user?.name}</p>
           {user?.phone && <p className="mt-2 text-ink-500">{user.phone}</p>}
@@ -154,5 +160,6 @@ export default function AccountOverviewPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

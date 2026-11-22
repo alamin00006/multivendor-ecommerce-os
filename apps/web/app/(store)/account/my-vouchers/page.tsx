@@ -85,7 +85,7 @@ export default function MyVouchersPage() {
             }
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {shown.map((v) => (
               <VoucherCard key={v.id} voucher={v} onCollect={() => void onCollect(v.id)} collecting={busyId === v.id} />
             ))}

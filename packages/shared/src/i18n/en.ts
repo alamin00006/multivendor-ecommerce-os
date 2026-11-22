@@ -1,3 +1,4 @@
+import { BRAND } from '../constants.js';
 export const en = {
   common: {
     search: 'Search',
@@ -41,7 +42,7 @@ export const en = {
     reviews: 'reviews',
     off: 'OFF',
     free: 'Free',
-    sellOn: 'Sell on MarketBD',
+    sellOn: `Sell on ${BRAND.name}`,
     sellerCenter: 'Seller Center',
     adminPanel: 'Admin',
     helpCenter: 'Help center',
@@ -57,7 +58,7 @@ export const en = {
     endsIn: 'Ending in',
     recommendedCategories: 'Recommended categories',
     dealsForYou: 'Deals for you',
-    appTitle: 'Shop faster with the MarketBD app',
+    appTitle: `Shop faster with the ${BRAND.name} app`,
     appText: 'Exclusive app-only deals, live order tracking and quick checkout with bKash.',
     campaigns: 'Running campaigns',
   },
@@ -170,7 +171,7 @@ export const en = {
     codeSent: 'We sent a code to {phone}',
     resendIn: 'Resend in {s}s',
     resend: 'Resend code',
-    noAccount: 'New to MarketBD?',
+    noAccount: `New to ${BRAND.name}?`,
     haveAccount: 'Already have an account?',
   },
   account: {

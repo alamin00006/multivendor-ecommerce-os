@@ -9,6 +9,7 @@ import {
   useRemoveCartItemMutation,
   useUpdateCartItemMutation,
 } from '@marketbd/api-client';
+import { BRAND } from '@marketbd/shared';
 import type { OnlinePaymentMethod, PaymentMethod } from '@marketbd/shared';
 import { Image } from 'expo-image';
 import { router, Stack } from 'expo-router';
@@ -164,7 +165,7 @@ export default function CheckoutScreen() {
                       <Text className="text-sm text-ink-800">{Object.values(item.variant.attributes).join(', ')}</Text>
                     </View>
                   ) : null}
-                  {g.seller ? <Text className="text-sm text-accent-600">{g.seller.isHouseStore ? 'Fulfilled by MarketBD' : `Sold by ${g.seller.shopName}`}</Text> : null}
+                  {g.seller ? <Text className="text-sm text-accent-600">{g.seller.isHouseStore ? `Fulfilled by ${BRAND.name}` : `Sold by ${g.seller.shopName}`}</Text> : null}
                   <View className="flex-row items-center justify-between">
                     <View className="h-9 flex-row items-center overflow-hidden rounded-md border border-ink-200">
                       <Pressable
@@ -256,7 +257,7 @@ export default function CheckoutScreen() {
         </View>
         <View className="flex-row items-center gap-2">
           <ShieldCheck size={20} color={colors.primary} fill="#dcfce7" />
-          <Text className="font-semibold text-success">MarketBD protects your payment information</Text>
+          <Text className="font-semibold text-success">{BRAND.name} protects your payment information</Text>
         </View>
         {preview.blockedItems > 0 ? <Text className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{t.cart.blocked}</Text> : null}
       </ScrollView>
@@ -267,7 +268,7 @@ export default function CheckoutScreen() {
           <Checkbox checked={agreed} onPress={() => setAgreed(!agreed)} label="Accept terms" />
           <Text className="flex-1 text-sm text-ink-600">
             I agree to the <Text className="text-info">Terms & Conditions</Text>, <Text className="text-info">Privacy Policy</Text>, and{' '}
-            <Text className="text-info">Return & Refund Policy</Text> of MarketBD.
+            <Text className="text-info">Return & Refund Policy</Text> of {BRAND.name}.
           </Text>
         </View>
         {vouchers.length ? (

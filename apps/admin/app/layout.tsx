@@ -12,7 +12,13 @@ const poppins = Poppins({ subsets: ['latin'], weight: ['500', '600', '700'], var
 export const metadata: Metadata = {
   title: { default: `${BRAND.name} Admin`, template: `%s | ${BRAND.name} Admin` },
   robots: { index: false, follow: false },
-  icons: { icon: '/icon.svg' },
+  icons: {
+    icon: [
+      { url: '/brand/icon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/brand/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: '/brand/icon-192.png',
+  },
 };
 
 /** Brand colours from Admin → Settings, read on the server so the first paint uses them. */

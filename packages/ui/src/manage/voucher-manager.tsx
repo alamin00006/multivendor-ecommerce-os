@@ -10,7 +10,7 @@ import {
   useSellerDeleteCouponMutation,
   useSellerSaveCouponMutation,
 } from '@marketbd/api-client';
-import {
+import { BRAND, 
   COUPON_SCOPES,
   COUPON_TYPES,
   type CouponScope,
@@ -33,7 +33,7 @@ import { fmtDate, PageHeader, Table } from './panel';
 
 const TYPE_LABEL: Record<CouponType, string> = { PERCENTAGE: 'Percent off', FIXED: 'Amount off', FREE_SHIPPING: 'Free delivery' };
 const SCOPE_LABEL: Record<CouponScope, string> = {
-  PLATFORM: 'MarketBD voucher (whole order)',
+  PLATFORM: `${BRAND.name} voucher (whole order)`,
   STORE: "Store voucher (one shop's items)",
   PAYMENT: 'Payment voucher (online method)',
 };
@@ -243,7 +243,7 @@ export function VoucherManager({ scope: panel }: { scope: 'admin' | 'seller' }) 
 
       <Modal open={draft !== null} onClose={() => setDraft(null)} title={draft?.id ? 'Edit voucher' : 'New voucher'} size="lg">
         {draft && (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {admin && (
               <div className="sm:col-span-2">
                 <label className="label" htmlFor="v-scope">Voucher kind</label>

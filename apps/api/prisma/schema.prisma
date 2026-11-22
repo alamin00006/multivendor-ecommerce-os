@@ -67,6 +67,25 @@ enum PaymentStatus {
   PARTIALLY_REFUNDED
 }
 
+/// Courier companies the platform books parcels with.
+enum CourierProvider {
+  PATHAO
+  STEADFAST
+}
+
+/// A courier the platform books with, configured by the admin (Admin → Couriers).
+model CourierAccount {
+  provider      CourierProvider @id
+  enabled       Boolean         @default(false)
+  sandbox       Boolean         @default(false)
+  /// AES-256-GCM encrypted JSON of the courier's credentials.
+  credentials   String?
+  /// Secret the courier sends with each webhook (header or bearer token).
+  webhookSecret String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
 enum ShippingZone {
   INSIDE_DHAKA
   OUTSIDE_DHAKA
@@ -232,6 +251,7 @@ model User {
   conversations     Conversation[]     @relation("ChatCustomer")
   chatMessages      ChatMessage[]      @relation("ChatSender")
   notifications     Notification[]
+  pushTokens        PushToken[]
   couponRedemptions CouponRedemption[]
   couponCollections CouponCollection[]
 
@@ -351,8 +371,31 @@ model SellerProfile {
   conversations  Conversation[]
   coupons        Coupon[]
   payouts        Payout[]
+  courierStores  CourierStore[]
 
   @@index([status])
+}
+
+/// A seller's pickup point registered with a courier under the platform's courier account.
+/// The courier's rider collects that seller's parcels from this address.
+model CourierStore {
+  id              String          @id @default(cuid())
+  sellerId        String
+  provider        CourierProvider
+  /// The courier's store id. Null until the courier lists the new store (approval can take ~1 hour).
+  externalId      String?
+  name            String
+  contactName     String
+  contactNumber   String
+  address         String
+  cityId          Int
+  zoneId          Int
+  areaId          Int
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  seller          SellerProfile   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@unique([sellerId, provider])
 }
 
 /// Money paid out to a seller from their cleared earnings.
@@ -579,9 +622,41 @@ model SubOrder {
   items            OrderItem[]
   history          OrderStatusHistory[]
   returns          ReturnRequest[]
+  shipments        Shipment[]
 
   @@unique([orderId, sellerId])
   @@index([sellerId, status, createdAt])
+}
+
+/// A courier booking for one package (sub-order). A package can be booked again after the courier cancels the pickup.
+model Shipment {
+  id              String          @id @default(cuid())
+  subOrderId      String
+  provider        CourierProvider
+  consignmentId   String
+  /// Our reference sent to the courier; unique per booking.
+  merchantOrderId String          @unique
+  /// Customer-facing tracking code when the courier has one separate from the consignment id.
+  trackingCode    String?
+  /// Courier store the parcel is collected from; null for couriers without per-seller stores.
+  storeExternalId String?
+  /// Last courier status or webhook event, e.g. "order.picked" or "Delivered".
+  courierStatus   String
+  /// False once the courier cancelled the pickup; a new booking can then be made.
+  active          Boolean         @default(true)
+  /// Cash the rider collects, in poisha.
+  codAmount       Int
+  deliveryFee     Int?
+  collectedAmount Int?
+  /// Courier-side time of the last applied update, used to ignore out-of-order webhooks.
+  courierUpdatedAt DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  subOrder        SubOrder        @relation(fields: [subOrderId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, consignmentId])
+  @@index([subOrderId])
+  @@index([active, updatedAt])
 }
 
 model OrderItem {
@@ -870,6 +945,19 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt, createdAt])
+}
+
+/// Expo push token of a signed-in app install (one row per device).
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // ───────── Product Q&A ─────────

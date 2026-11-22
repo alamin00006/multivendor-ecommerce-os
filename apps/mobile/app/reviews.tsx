@@ -6,6 +6,7 @@ import { Star } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import { fmtDate, Sheet, UnderlineTabs } from '@/components/account';
+import { PhotoPicker } from '@/components/photo-picker';
 import { Button, colors, Loading, Stars } from '@/components/ui';
 import { img } from '@/lib/config';
 import { useRequireAuth } from '@/lib/use-require-auth';
@@ -32,9 +33,10 @@ function WriteSheet({ item, onClose }: { item: ReviewableItem; onClose: () => vo
   const [create, state] = useCreateReviewMutation();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
   const submit = async () => {
     try {
-      await create({ productId: item.productId, rating, comment: comment.trim() || undefined }).unwrap();
+      await create({ productId: item.productId, rating, comment: comment.trim() || undefined, imageUrls: photos }).unwrap();
       Alert.alert('Thanks for your review!');
       onClose();
     } catch (e) {
@@ -67,6 +69,7 @@ function WriteSheet({ item, onClose }: { item: ReviewableItem; onClose: () => vo
         maxLength={2000}
         accessibilityLabel="Your review"
       />
+      <PhotoPicker value={photos} onChange={setPhotos} folder="reviews" />
       <Button title="Submit review" onPress={() => void submit()} loading={state.isLoading} />
     </Sheet>
   );

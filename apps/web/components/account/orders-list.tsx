@@ -5,6 +5,7 @@ import { BRAND, type OrderListQuery } from '@marketbd/shared';
 import { ShoppingBasket } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useI18n, Button, cn, ErrorState, Skeleton, OrderStatusBadge, PaymentStatusBadge } from '@marketbd/ui';
 
@@ -35,11 +36,15 @@ const EMPTY: Record<string, string> = {
   delivered: 'No delivered orders yet',
 };
 
-/** Customer order list in a titled panel, with lifecycle tabs. */
+/** Link to a tab of the order list, e.g. orderTabHref('to-pay'). */
+export const orderTabHref = (key: string) => (key === 'all' ? '/account/orders' : `/account/orders?tab=${key}`);
+
+/** Customer order list in a titled panel, with lifecycle tabs (?tab=to-pay opens that tab). */
 export function OrdersList({ title }: { title: string }) {
   const { t, money, locale } = useI18n();
   const { showSellerInfo } = useMarketplaceMode();
-  const [tab, setTab] = useState<Tab>(TABS[0]!);
+  const params = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => TABS.find((x) => x.key === params.get('tab')) ?? TABS[0]!);
   const [page, setPage] = useState(1);
   const query = tab.query;
   const { data, isLoading, isFetching, isError, refetch } = useOrdersQuery({ ...query, page, limit: 10 });

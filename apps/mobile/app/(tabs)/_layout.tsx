@@ -2,10 +2,12 @@ import { useCartCount, useChatLive, useChatUnreadQuery, useIsAuthenticated } fro
 import { Tabs } from 'expo-router';
 import { Home, LayoutGrid, MessageCircle, ShoppingCart, User } from 'lucide-react-native';
 import { colors } from '@/components/ui';
+import { useBrandColors } from '@/lib/brand-theme';
 import { useI18n } from '@/i18n';
 
 export default function TabsLayout() {
   const { t } = useI18n();
+  const brand = useBrandColors();
   const cartCount = useCartCount();
   const authed = useIsAuthenticated();
   const chatLive = useChatLive();
@@ -13,10 +15,10 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.accent,
+        tabBarActiveTintColor: brand.accent,
         tabBarLabelStyle: { fontSize: 12, fontWeight: '500' },
         tabBarInactiveTintColor: colors.muted,
-        headerStyle: { backgroundColor: colors.primary },
+        headerStyle: { backgroundColor: brand.primary },
         headerTintColor: '#fff',
       }}
     >

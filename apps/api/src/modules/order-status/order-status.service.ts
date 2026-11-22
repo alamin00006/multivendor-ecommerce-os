@@ -4,11 +4,12 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import {
   aggregateStatus,
   canAdminTransition,
+  canCourierTransition,
   canSellerTransition,
   RESTOCK_ON_CANCEL_FROM,
 } from './order-status.rules.js';
 
-export type Actor = 'customer' | 'seller' | 'admin' | 'system';
+export type Actor = 'customer' | 'seller' | 'admin' | 'system' | 'courier';
 
 export interface TransitionOptions {
   actor: Actor;
@@ -40,6 +41,8 @@ export class OrderStatusService {
         return canAdminTransition(from, to);
       case 'seller':
         return canSellerTransition(from, to);
+      case 'courier':
+        return canCourierTransition(from, to);
       default:
         return canTransitionOrder(from, to);
     }
@@ -88,7 +91,9 @@ export class OrderStatusService {
         actorId: opts.actorId,
       },
     });
-    if (to === 'CANCELLED' && RESTOCK_ON_CANCEL_FROM.includes(sub.status)) await this.restock(tx, subOrderId);
+    // A parcel the courier brings back undelivered returns its stock too.
+    const restock = RESTOCK_ON_CANCEL_FROM.includes(sub.status) || (opts.actor === 'courier' && sub.status === 'SHIPPED');
+    if (to === 'CANCELLED' && restock) await this.restock(tx, subOrderId);
     await this.recompute(tx, sub.orderId, opts);
   }
 

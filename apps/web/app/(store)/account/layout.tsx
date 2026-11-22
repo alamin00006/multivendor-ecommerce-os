@@ -2,6 +2,7 @@
 
 import { selectUser, useChatLive, useChatUnreadQuery, useLogoutMutation, useMarketplaceMode } from '@marketbd/api-client';
 import {
+  ArrowLeft,
   Ban,
   Bell,
   BookUser,
@@ -72,8 +73,14 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   return (
     <div className="container-site pt-4">
       <RequireAuth>
+        {/* Phones: the account home is the menu; other pages get a way back to it. */}
+        {pathname !== '/account' && (
+          <Link href="/account" className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 lg:hidden">
+            <ArrowLeft className="size-4" /> My Account
+          </Link>
+        )}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="h-fit min-w-0 rounded-lg bg-white p-4 shadow-card">
+          <aside className="hidden h-fit min-w-0 rounded-lg bg-white p-4 shadow-card lg:block">
             <div className="flex items-center justify-between gap-2 border-b border-ink-100 pb-3 lg:block">
               <div className="min-w-0">
                 <p className="text-xs text-ink-500">Hello,</p>
@@ -84,7 +91,6 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
               )}
             </div>
 
-            {/* Phones: one scrollable row. Desktop: grouped list. */}
             <nav className="scrollbar-none -mx-1 mt-2 flex gap-1 overflow-x-auto lg:mx-0 lg:block">
               {groups.map((group, gi) => (
                 <div key={gi} className="flex shrink-0 gap-1 lg:block lg:border-b lg:border-ink-100 lg:py-2 lg:last:border-0">

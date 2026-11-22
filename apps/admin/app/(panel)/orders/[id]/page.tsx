@@ -5,7 +5,7 @@ import { fromPoisha, ORDER_STATUSES, type OrderStatus, toPoisha } from '@marketb
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { AddressBlock, OrderItemRow, OrderTimeline, fmtDate, PageHeader, useI18n, Badge, Button, ErrorState, Modal, Skeleton, OrderStatusBadge, PaymentStatusBadge } from '@marketbd/ui';
+import { AddressBlock, OrderItemRow, OrderTimeline, fmtDate, PageHeader, useI18n, Badge, Button, ErrorState, Modal, Skeleton, OrderStatusBadge, PaymentStatusBadge, ShipmentPanel } from '@marketbd/ui';
 
 export default function AdminOrderPage() {
   const { money } = useI18n();
@@ -96,6 +96,18 @@ export default function AdminOrderPage() {
             <AddressBlock address={order.shippingAddress} />
             {order.note && <p className="mt-2 rounded bg-ink-50 p-2 text-xs">Note: {order.note}</p>}
           </section>
+          {order.channel !== 'POS' &&
+            order.subOrders.map((sub, i) => (
+              <ShipmentPanel
+                key={sub.id}
+                scope="admin"
+                orderId={order.id}
+                subOrderId={sub.id}
+                status={sub.status}
+                shipment={sub.shipment}
+                title={order.subOrders.length > 1 ? `Courier · Package ${i + 1}` : 'Courier'}
+              />
+            ))}
           <section className="card p-4 text-sm">
             <h3 className="mb-2 font-semibold">Payment</h3>
             <dl className="space-y-1">

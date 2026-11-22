@@ -27,7 +27,7 @@ export function Footer() {
   const socials = SOCIAL_BADGES.filter((s) => store?.social[s.key]);
   return (
     <footer className="mt-10 border-t border-ink-100 bg-white pb-20 text-ink-600 md:pb-0">
-      <div className="container-site grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
+      <div className="container-site grid grid-cols-1 gap-8 py-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
         <div className="space-y-2.5 text-sm">
           <Logo />
           {store?.address && (

@@ -1,3 +1,4 @@
+import { BRAND } from '../constants.js';
 import type { Dictionary } from './en.js';
 
 export const bn: Dictionary = {
@@ -43,7 +44,7 @@ export const bn: Dictionary = {
     reviews: 'রিভিউ',
     off: 'ছাড়',
     free: 'ফ্রি',
-    sellOn: 'মার্কেটবিডিতে বিক্রি করুন',
+    sellOn: `${BRAND.nameBn}-তে বিক্রি করুন`,
     sellerCenter: 'সেলার সেন্টার',
     adminPanel: 'অ্যাডমিন',
     helpCenter: 'সাহায্য কেন্দ্র',
@@ -59,7 +60,7 @@ export const bn: Dictionary = {
     endsIn: 'শেষ হবে',
     recommendedCategories: 'আপনার জন্য ক্যাটাগরি',
     dealsForYou: 'আপনার জন্য অফার',
-    appTitle: 'মার্কেটবিডি অ্যাপে দ্রুত কেনাকাটা করুন',
+    appTitle: `${BRAND.nameBn} অ্যাপে দ্রুত কেনাকাটা করুন`,
     appText: 'অ্যাপ-এক্সক্লুসিভ অফার, লাইভ অর্ডার ট্র্যাকিং এবং বিকাশে দ্রুত চেকআউট।',
     campaigns: 'চলমান ক্যাম্পেইন',
   },
@@ -172,7 +173,7 @@ export const bn: Dictionary = {
     codeSent: '{phone} নম্বরে কোড পাঠানো হয়েছে',
     resendIn: '{s} সেকেন্ড পর আবার পাঠান',
     resend: 'আবার কোড পাঠান',
-    noAccount: 'মার্কেটবিডিতে নতুন?',
+    noAccount: `${BRAND.nameBn}-তে নতুন?`,
     haveAccount: 'আগে থেকেই অ্যাকাউন্ট আছে?',
   },
   account: {

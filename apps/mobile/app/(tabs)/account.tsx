@@ -1,10 +1,11 @@
-import { selectAuth, useLogoutMutation, useOrdersQuery, usePendingReviewsQuery, useUnreadCountQuery } from '@marketbd/api-client';
+import { selectAuth, useOrdersQuery, usePendingReviewsQuery, useUnreadCountQuery } from '@marketbd/api-client';
 import { BANGLA_ENABLED } from '@marketbd/shared';
 import { router, type Href } from 'expo-router';
 import {
   BadgeCheck,
   Bell,
   ChevronRight,
+  CircleHelp,
   Globe,
   Heart,
   LogOut,
@@ -26,6 +27,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { Button, colors, Loading } from '@/components/ui';
 import { useI18n } from '@/i18n';
+import { useSignOut } from '@/lib/push';
 
 type Icon = ComponentType<{ size: number; color: string }>;
 
@@ -81,7 +83,7 @@ export default function AccountScreen() {
   const { t, locale, setLocale } = useI18n();
   const { user, status } = useSelector(selectAuth);
   const authed = status === 'authenticated';
-  const [logout, logoutState] = useLogoutMutation();
+  const [signOut, logoutState] = useSignOut();
   const { data: unread } = useUnreadCountQuery(undefined, { skip: !authed, pollingInterval: 60_000 });
   const toPay = useOrdersQuery({ toPay: true, limit: 1 }, { skip: !authed });
   const toShip = useOrdersQuery({ status: 'PROCESSING', limit: 1 }, { skip: !authed });
@@ -164,9 +166,13 @@ export default function AccountScreen() {
         </Group>
       )}
 
+      <Group title="Support">
+        <Row icon={CircleHelp} label="Help Center" hint="FAQ, returns, delivery and contact" href="/help" />
+      </Group>
+
       <View className="mx-3 mt-3 overflow-hidden rounded-xl bg-white">
         {BANGLA_ENABLED ? <Row icon={Globe} label={`${t.common.language} (${locale === 'en' ? 'English' : 'বাংলা'})`} onPress={() => setLocale(locale === 'en' ? 'bn' : 'en')} /> : null}
-        {user ? <Row icon={LogOut} label={logoutState.isLoading ? t.common.loading : t.common.signOut} onPress={() => void logout()} /> : null}
+        {user ? <Row icon={LogOut} label={logoutState.isLoading ? t.common.loading : t.common.signOut} onPress={() => void signOut()} /> : null}
       </View>
     </ScrollView>
   );

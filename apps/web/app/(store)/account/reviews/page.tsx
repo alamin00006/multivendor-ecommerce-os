@@ -58,7 +58,7 @@ function ReviewForm({ item }: { item: ReviewableItem }) {
   };
 
   return (
-    <li className="grid gap-4 py-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+    <li className="grid grid-cols-1 gap-4 py-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
       <div className="flex gap-3">
         <Link href={`/p/${item.productSlug}`} className="relative size-20 shrink-0 overflow-hidden rounded-md bg-ink-50">
           {item.imageUrl && <Image src={item.imageUrl} alt="" fill sizes="80px" className="object-cover" />}
