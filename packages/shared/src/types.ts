@@ -3,6 +3,7 @@
  * Shared by the API (return types) and the web/mobile clients (RTK Query types).
  * Dates are ISO strings on the wire.
  */
+import type { OwnCourier } from './schemas/own-delivery.js';
 import type {
   AddressLabel,
   BannerPlacement,
@@ -266,6 +267,8 @@ export interface ShopView extends SellerSummary {
   description: string | null;
   bannerUrl: string | null;
   productCount: number;
+  /** Visible reviews across the shop's products. */
+  reviewCount: number;
   createdAt: IsoDate;
 }
 
@@ -309,6 +312,8 @@ export interface CheckoutGroup {
   items: CartItemView[];
   subtotal: number;
   shippingFee: number;
+  /** Who delivers this package and when it should arrive. */
+  delivery: { by: 'PLATFORM' | 'SHOP'; courier: string | null; eta: string | null };
 }
 
 export interface CheckoutPreview {
@@ -321,7 +326,7 @@ export interface CheckoutPreview {
   coupon: { code: string; discount: number; appliesTo: 'items' | 'shipping' } | null;
   couponError: string | null;
   blockedItems: number;
-  paymentMethods: Array<{ method: OnlinePaymentMethod; enabled: boolean }>;
+  paymentMethods: Array<{ method: OnlinePaymentMethod; enabled: boolean; note?: string | null }>;
 }
 
 export interface OrderItemView {
@@ -358,6 +363,12 @@ export interface SubOrderView {
   trackingNumber: string | null;
   /** Latest courier booking for this package, if any. */
   shipment: ShipmentView | null;
+  /** PLATFORM = MarketBD's couriers; SELLER = the shop's own courier. */
+  fulfillment: 'PLATFORM' | 'SELLER';
+  courierName: string | null;
+  /** COD package delivered by the shop: the shop collects the cash. */
+  sellerCollectsCash: boolean;
+  dispute: DeliveryDisputeView | null;
   items: OrderItemView[];
   history: StatusEvent[];
 }
@@ -467,6 +478,12 @@ export interface SellerOrderView {
   trackingNumber: string | null;
   /** Latest courier booking for this package, if any. */
   shipment: ShipmentView | null;
+  /** PLATFORM = MarketBD's couriers; SELLER = the shop's own courier. */
+  fulfillment: 'PLATFORM' | 'SELLER';
+  courierName: string | null;
+  /** COD package delivered by the shop: the shop collects the cash. */
+  sellerCollectsCash: boolean;
+  dispute: DeliveryDisputeView | null;
   shippingAddress: ShippingAddressSnapshot;
   items: OrderItemView[];
   history: StatusEvent[];
@@ -525,6 +542,8 @@ export interface CampaignView {
   isActive: boolean;
   sortOrder: number;
   productCount: number;
+  terms: string[];
+  voucherCodes: string[];
 }
 
 export interface FlashSaleItemView {
@@ -786,6 +805,10 @@ export interface SellerEarnings {
   /** Payout requests waiting for admin. */
   requested: number;
   paidOut: number;
+  /** Payments the shop made to the platform and other manual corrections. */
+  adjustments: number;
+  /** Cleared earnings + adjustments − payouts; negative = the shop owes commission. */
+  balance: number;
   holdDays: number;
   minPayout: number;
   payoutAccount: PayoutAccountView | null;
@@ -938,4 +961,70 @@ export interface ShipmentView {
   collectedAmount: number | null;
   createdAt: IsoDate;
   updatedAt: IsoDate;
+}
+
+// ───────── Own delivery (shop's own courier) ─────────
+
+export interface DeliveryDisputeView {
+  note: string;
+  createdAt: IsoDate;
+  resolution: 'DELIVERED' | 'NOT_DELIVERED' | null;
+  resolvedAt: IsoDate | null;
+}
+
+export interface OwnDeliverySettingsView {
+  courier: OwnCourier;
+  courierName: string | null;
+  insideDhakaFee: number;
+  outsideDhakaFee: number;
+  insideDhakaEta: string;
+  outsideDhakaEta: string;
+}
+
+export interface OwnDeliveryView {
+  /** null = MarketBD Delivery. */
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
+  settings: OwnDeliverySettingsView | null;
+  /** Admin's note on the last decision. */
+  note: string | null;
+  updatedAt: IsoDate | null;
+  /** Balance can go below zero when the shop collected COD cash and owes commission. */
+  balance: number;
+  dueLimit: number;
+  /** COD is paused for this shop's own deliveries until dues are paid. */
+  codPaused: boolean;
+}
+
+export interface OwnDeliveryShopView extends OwnDeliveryView {
+  seller: { id: string; shopName: string; slug: string; phone: string | null };
+  stats: {
+    shipped: number;
+    delivered: number;
+    returned: number;
+    /** Average days from shipped to delivered (null with no deliveries yet). */
+    avgDeliveryDays: number | null;
+    openDisputes: number;
+    disputes: number;
+  };
+}
+
+export interface SellerAdjustmentView {
+  id: string;
+  amount: number;
+  note: string;
+  reference: string | null;
+  createdAt: IsoDate;
+}
+
+export interface OpenDisputeView {
+  orderId: string;
+  orderNumber: string;
+  subOrderId: string;
+  shopName: string;
+  courierName: string | null;
+  trackingNumber: string | null;
+  total: number;
+  customer: { name: string; phone: string | null };
+  note: string;
+  createdAt: IsoDate;
 }

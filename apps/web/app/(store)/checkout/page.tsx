@@ -180,7 +180,8 @@ function Checkout() {
                   </ul>
                   <div className="flex items-center justify-between border-t border-ink-100 px-4 py-3 text-sm">
                     <span>
-                      Standard Delivery {eta && <span className="text-xs text-primary-700">Receive within {eta}</span>}
+                      {g.delivery.by === 'SHOP' ? `Delivered by the shop · ${g.delivery.courier}` : 'Standard Delivery'}{' '}
+                      {(g.delivery.eta ?? eta) && <span className="text-xs text-primary-700">Receive within {g.delivery.eta ?? eta}</span>}
                     </span>
                     <span className="font-semibold text-success">{selectedId ? `Fee ${money(g.shippingFee)}` : 'Add an address'}</span>
                   </div>
@@ -196,7 +197,7 @@ function Checkout() {
             <ShieldCheck className="size-6 fill-success text-white" aria-label="Secure payment" />
           </div>
           <div className="card divide-y divide-ink-100 px-4">
-            {methods.map(({ method: m, enabled }) => {
+            {methods.map(({ method: m, enabled, note }) => {
               const Icon = METHOD_ICON[m];
               const on = method === m;
               return (
@@ -215,7 +216,7 @@ function Checkout() {
                   <Icon className="size-7 shrink-0 text-accent-600" />
                   <span className="flex-1">
                     <span className="block font-semibold text-ink-900">{t.checkout.methods[m]}</span>
-                    {!enabled && <span className="text-xs text-ink-500">{t.checkout.unavailableMethod}</span>}
+                    {!enabled && <span className="text-xs text-ink-500">{note ?? t.checkout.unavailableMethod}</span>}
                   </span>
                   {m === recommended && <span className="rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">Recommended</span>}
                 </label>

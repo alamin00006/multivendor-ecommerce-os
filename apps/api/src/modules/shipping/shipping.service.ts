@@ -196,6 +196,7 @@ export class ShippingService implements OnModuleInit, OnModuleDestroy {
         include: { order: true, items: true, shipments: { orderBy: { createdAt: 'desc' } } },
       });
       if (sub.order.channel === 'POS') throw new BadRequestException('Counter sales are not shipped');
+      if (sub.fulfillment === 'SELLER') throw new BadRequestException("This package is delivered by the shop's own courier");
       if (!BOOKABLE.includes(sub.status)) {
         throw new BadRequestException(
           sub.status === 'PENDING' ? 'Confirm the order before booking the courier' : `A ${sub.status.toLowerCase()} package cannot be booked`,

@@ -26,6 +26,8 @@ export const CampaignSchema = z
     type: CampaignTypeSchema,
     isActive: z.boolean().default(true),
     sortOrder: z.coerce.number().int().min(0).default(0),
+    terms: z.array(z.string().trim().min(1).max(300)).max(20).default([]),
+    voucherCodes: z.array(z.string().trim().toUpperCase().min(3).max(30)).max(10).default([]),
   })
   .refine(endAfterStart, endAfterStartError);
 export type CampaignInput = z.input<typeof CampaignSchema>;

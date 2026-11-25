@@ -383,6 +383,15 @@ async function seedMerchandising(productIds: string[]) {
       startAt: new Date(now - DAY),
       endAt: new Date(now + 21 * DAY),
       sortOrder: 0,
+      voucherCodes: ['SAVE10', 'FREESHIP'],
+      terms: [
+        'Prices and discounts are valid only while the campaign is live.',
+        'One campaign voucher can be used per order.',
+        'Vouchers cannot be exchanged for cash.',
+        'Items are limited and sold on a first come, first served basis.',
+        'If an order is cancelled because an item is out of stock, the full amount is refunded and the voucher can be used again.',
+        'MarketBD may end the campaign or a voucher early in case of misuse.',
+      ],
     },
   });
   const gadgetFest = await prisma.campaign.create({

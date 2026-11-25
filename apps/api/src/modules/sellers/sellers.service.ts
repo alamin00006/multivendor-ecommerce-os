@@ -35,6 +35,7 @@ const toShopView = (s: ProfileRow): ShopView => ({
   description: s.description,
   bannerUrl: s.bannerUrl,
   productCount: s._count.products,
+  reviewCount: 0,
   createdAt: s.createdAt.toISOString(),
 });
 
@@ -119,8 +120,11 @@ export class SellersService {
   async shop(slug: string): Promise<ShopView> {
     const profile = await this.prisma.sellerProfile.findUnique({ where: { slug }, include: profileInclude });
     if (!profile || profile.status !== 'APPROVED') throw new NotFoundException('Shop not found');
-    const productCount = await this.prisma.product.count({ where: { sellerId: profile.id, status: 'ACTIVE' } });
-    return { ...toShopView(profile), productCount };
+    const [productCount, reviewCount] = await Promise.all([
+      this.prisma.product.count({ where: { sellerId: profile.id, status: 'ACTIVE' } }),
+      this.prisma.review.count({ where: { isVisible: true, product: { sellerId: profile.id } } }),
+    ]);
+    return { ...toShopView(profile), productCount, reviewCount };
   }
 
   async dashboard(userId: string): Promise<SellerDashboard> {

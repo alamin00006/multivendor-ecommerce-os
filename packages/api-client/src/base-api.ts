@@ -15,6 +15,7 @@ export const TAG_TYPES = [
   'Me',
   'Chat',
   'PosProducts',
+  'OwnDelivery',
   'Earnings',
   'Payouts',
   'SellerReturns',

@@ -86,6 +86,19 @@ model CourierAccount {
   updatedAt     DateTime        @updatedAt
 }
 
+/// Who delivers a package: the platform's couriers, or the shop with its own courier.
+enum Fulfillment {
+  PLATFORM
+  SELLER
+}
+
+/// A shop's request to deliver with its own courier.
+enum OwnDeliveryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum ShippingZone {
   INSIDE_DHAKA
   OUTSIDE_DHAKA
@@ -215,6 +228,8 @@ model PlatformSetting {
   /// Brand colours (hex): primary = shade 700, accent = shade 500.
   brandPrimary         String   @default("#08755a")
   brandAccent          String   @default("#f55a36")
+  /// Most a shop delivering COD with its own courier may owe in commission before COD is paused (poisha).
+  ownDeliveryDueLimit  Int      @default(500000)
   updatedById          String?
   updatedAt            DateTime @updatedAt
 }
@@ -363,11 +378,19 @@ model SellerProfile {
   approvedAt     DateTime?
   /// Where payouts go: { method, accountName, accountNumber, bankName?, branch? }
   payoutAccount  Json?
+  /// Own-courier settings: { courier, courierName?, insideDhakaFee, outsideDhakaFee, insideDhakaEta, outsideDhakaEta }
+  ownDelivery           Json?
+  /// Null = MarketBD Delivery. APPROVED = the shop delivers its own packages.
+  ownDeliveryStatus     OwnDeliveryStatus?
+  /// Admin's note on the last decision (shown to the seller).
+  ownDeliveryNote       String?
+  ownDeliveryUpdatedAt  DateTime?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   user           User           @relation(fields: [userId], references: [id])
   products       Product[]
   subOrders      SubOrder[]
+  adjustments    SellerAdjustment[]
   conversations  Conversation[]
   coupons        Coupon[]
   payouts        Payout[]
@@ -615,6 +638,18 @@ model SubOrder {
   commissionRate   Decimal              @db.Decimal(5, 2)
   commissionAmount Int
   trackingNumber   String?
+  /// Who delivers this package (fixed when the order is placed).
+  fulfillment        Fulfillment        @default(PLATFORM)
+  /// Shop's courier for SELLER fulfilment, e.g. "Steadfast" or "Own rider".
+  courierName        String?
+  /// COD package delivered by the shop: the courier pays the cash to the shop, not the platform.
+  sellerCollectsCash Boolean            @default(false)
+  /// Customer said the parcel never arrived.
+  disputeNote        String?
+  disputedAt         DateTime?
+  /// DELIVERED (complaint rejected) or NOT_DELIVERED (customer is right), set by admin.
+  disputeResolution  String?
+  disputeResolvedAt  DateTime?
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
   order            Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -856,6 +891,10 @@ model Campaign {
   endAt           DateTime
   isActive        Boolean           @default(true)
   sortOrder       Int               @default(0)
+  /// Terms & conditions shown on the campaign page, one rule per item.
+  terms           String[]          @default([])
+  /// Voucher codes promoted on the campaign page ("Collect Voucher & Enjoy Discount").
+  voucherCodes    String[]          @default([])
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   products        CampaignProduct[]
@@ -1019,4 +1058,19 @@ model ChatMessage {
   product        Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([conversationId, createdAt])
+}
+
+/// Manual balance change for a seller, e.g. commission dues the seller paid to the platform (positive amount).
+model SellerAdjustment {
+  id          String        @id @default(cuid())
+  sellerId    String
+  /// Poisha; positive adds to the seller's balance, negative takes from it.
+  amount      Int
+  note        String
+  reference   String?
+  createdById String
+  createdAt   DateTime      @default(now())
+  seller      SellerProfile @relation(fields: [sellerId], references: [id])
+
+  @@index([sellerId, createdAt])
 }

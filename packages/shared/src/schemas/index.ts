@@ -8,3 +8,4 @@ export * from './platform.js';
 export * from './chat.js';
 export * from './seller-business.js';
 export * from './shipping.js';
+export * from './own-delivery.js';

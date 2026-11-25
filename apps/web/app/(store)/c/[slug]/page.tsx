@@ -36,7 +36,9 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
 
   return (
     <div className="container-site pt-3">
-      <Breadcrumbs items={category.breadcrumbs.map((b) => ({ label: name(b), href: `/c/${b.slug}` }))} />
+      <div className="hidden md:block">
+        <Breadcrumbs items={category.breadcrumbs.map((b) => ({ label: name(b), href: `/c/${b.slug}` }))} />
+      </div>
       {category.children.length > 0 && (
         <div className="scrollbar-none mb-3 flex gap-3 overflow-x-auto">
           {category.children.map((c) => (

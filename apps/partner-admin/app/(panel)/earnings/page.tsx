@@ -226,11 +226,22 @@ export default function SellerEarningsPage() {
               <dt>Requested / paid out</dt>
               <dd>−{money(e.requested + e.paidOut)}</dd>
             </div>
+            {e.adjustments !== 0 && (
+              <div className="flex justify-between text-ink-500">
+                <dt>Paid to MarketBD / corrections</dt>
+                <dd>{e.adjustments > 0 ? '+' : '−'}{money(Math.abs(e.adjustments))}</dd>
+              </div>
+            )}
             <div className="flex justify-between border-t border-dashed border-ink-200 pt-2 text-base">
-              <dt className="font-bold">Available</dt>
-              <dd className="font-bold text-primary-700">{money(e.available)}</dd>
+              <dt className="font-bold">{e.balance < 0 ? 'You owe MarketBD' : 'Available'}</dt>
+              <dd className={`font-bold ${e.balance < 0 ? 'text-danger' : 'text-primary-700'}`}>{money(Math.abs(e.balance))}</dd>
             </div>
           </dl>
+          {e.balance < 0 && (
+            <p className="mt-3 rounded-md bg-red-50 p-2.5 text-xs text-red-800">
+              This is commission on Cash on Delivery orders your own courier collected for you. Pay it to MarketBD (bKash or bank) and support will record it; it is also taken from your next online-paid earnings.
+            </p>
+          )}
           <p className="mt-3 text-xs text-ink-500">Counter (POS) sales are paid to you in cash, so only their commission is taken from this balance.</p>
         </section>
 

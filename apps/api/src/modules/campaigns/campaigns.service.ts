@@ -18,6 +18,8 @@ const toView = (c: Campaign, productCount: number): CampaignView => ({
   isActive: c.isActive,
   sortOrder: c.sortOrder,
   productCount,
+  terms: c.terms,
+  voucherCodes: c.voucherCodes,
 });
 
 const campaignData = (input: CampaignPayload) => ({
@@ -33,6 +35,8 @@ const campaignData = (input: CampaignPayload) => ({
   endAt: new Date(input.endAt as Date),
   isActive: input.isActive ?? true,
   sortOrder: Number(input.sortOrder ?? 0),
+  terms: input.terms ?? [],
+  voucherCodes: input.voucherCodes ?? [],
 });
 
 @Injectable()

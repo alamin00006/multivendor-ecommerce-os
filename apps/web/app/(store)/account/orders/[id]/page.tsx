@@ -12,6 +12,7 @@ import {
 import type { OrderItemView } from '@marketbd/shared';
 import { Star, Store } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import { PackageDelivery } from '@/components/account/package-delivery';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { AddressBlock, OrderItemRow, OrderTimeline, useI18n, Badge, Button, cn, ErrorState, Modal, Skeleton, OrderStatusBadge, PaymentStatusBadge } from '@marketbd/ui';
@@ -157,6 +158,7 @@ export default function OrderDetailPage() {
               />
             ))}
           </ul>
+          <PackageDelivery orderId={order.id} sub={sub} />
         </section>
       ))}
 

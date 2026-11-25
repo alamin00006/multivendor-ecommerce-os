@@ -218,6 +218,7 @@ export function ProductListing({
   const setPage = (next: number | ((p: number) => number)) =>
     setPaging((s) => ({ key: filterKey, page: typeof next === 'function' ? next(s.page) : next }));
   const [drawer, setDrawer] = useState(false);
+  const [sortSheet, setSortSheet] = useState(false);
   const query = { ...params, page, limit: PAGE_SIZE };
   const { data, isFetching, isError, refetch } = useProductFeedQuery(query);
 
@@ -275,9 +276,36 @@ export function ProductListing({
       </aside>
 
       <div className="min-w-0 flex-1">
+        <div className="sticky top-16 z-20 -mx-3 mb-3 flex gap-2 overflow-x-auto border-b border-ink-100 bg-white px-3 py-2 scrollbar-none lg:hidden">
+          {(
+            [
+              ['Brand', () => setDrawer(true), Boolean(params.brand)],
+              ['Price', () => setDrawer(true), Boolean(params.minPrice || params.maxPrice)],
+              ['Sort By', () => setSortSheet(true), params.sort !== 'relevance'],
+            ] as const
+          ).map(([label, onClick, active]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={onClick}
+              className={cn('flex h-8 shrink-0 items-center gap-1 rounded-md px-2.5 text-[13px] font-medium', active ? 'bg-primary-50 text-primary-800' : 'bg-ink-50 text-ink-800')}
+            >
+              {label} <ChevronDown className="size-3.5" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setDrawer(true)}
+            className={cn('flex h-8 shrink-0 items-center gap-1 rounded-md px-2.5 text-[13px] font-medium', chips.length ? 'bg-primary-50 text-primary-800' : 'bg-ink-50 text-ink-800')}
+          >
+            <SlidersHorizontal className="size-3.5" /> Filter
+            {chips.length > 0 && <span className="grid size-4 place-items-center rounded-full bg-primary-700 text-[10px] font-bold text-white">{chips.length}</span>}
+          </button>
+        </div>
+
         <div className="mb-4 flex flex-wrap items-end gap-3">
           <div className="min-w-0 flex-1">
-            {title}
+            <div className="hidden lg:block">{title}</div>
             <p className="mt-0.5 text-sm text-ink-500">
               <b className="text-ink-800">{total.toLocaleString()}</b> {t.listing.results}
               {found && (
@@ -287,11 +315,7 @@ export function ProductListing({
               )}
             </p>
           </div>
-          <button type="button" onClick={() => setDrawer(true)} className="flex h-9 items-center gap-1.5 rounded-md border border-ink-200 bg-white px-3 text-sm lg:hidden">
-            <SlidersHorizontal className="size-4" /> {t.listing.filters}
-            {chips.length > 0 && <span className="grid size-5 place-items-center rounded-full bg-primary-700 text-[10px] font-bold text-white">{chips.length}</span>}
-          </button>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="hidden items-center gap-2 text-sm lg:flex">
             <span className="hidden text-ink-500 sm:inline">Sort By:</span>
             <select
               className="input h-9 w-auto min-w-40 bg-white font-medium"
@@ -339,6 +363,36 @@ export function ProductListing({
           </div>
         )}
       </div>
+
+      {sortSheet && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/40 lg:hidden" onClick={() => setSortSheet(false)}>
+          <div role="dialog" aria-label="Sort by" className="w-full rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-ink-100 px-4 py-3">
+              <h2 className="font-semibold">Sort By</h2>
+              <button type="button" onClick={() => setSortSheet(false)} aria-label={t.common.close}>
+                <X className="size-5" />
+              </button>
+            </div>
+            <ul className="py-1">
+              {PRODUCT_SORTS.map((s) => (
+                <li key={s}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParam('sort', s === 'relevance' ? null : s);
+                      setSortSheet(false);
+                    }}
+                    className={cn('flex w-full items-center justify-between px-4 py-3 text-left text-sm', params.sort === s ? 'font-semibold text-primary-700' : 'text-ink-800')}
+                  >
+                    {t.listing.sort[s]}
+                    <span className={cn('size-4 rounded-full border-2', params.sort === s ? 'border-primary-700 bg-primary-700 shadow-[inset_0_0_0_2px_white]' : 'border-ink-300')} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {drawer && (
         <div className="fixed inset-0 z-50 bg-black/40 lg:hidden" onClick={() => setDrawer(false)}>

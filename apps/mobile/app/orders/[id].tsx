@@ -13,6 +13,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { CheckCircle2, Circle, Star } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
+import { PackageDelivery } from '@/components/package-delivery';
 import { Badge, Button, Card, colors, ErrorView, Loading } from '@/components/ui';
 import { useI18n } from '@/i18n';
 import { img } from '@/lib/config';
@@ -113,6 +114,7 @@ export default function OrderScreen() {
               </View>
             </View>
           ))}
+          <PackageDelivery orderId={order.id} sub={sub} />
         </Card>
       ))}
 

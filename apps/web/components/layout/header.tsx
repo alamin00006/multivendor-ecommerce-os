@@ -33,6 +33,7 @@ import { Suspense, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { partnerUrl, useI18n } from '@marketbd/ui';
 import { Logo } from '@marketbd/ui';
+import { AppBanner, MobileMenu } from './mobile-header';
 import { SearchBar } from './search-bar';
 
 function CategoryMenu({ categories }: { categories: CategoryNode[] }) {
@@ -231,8 +232,12 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 bg-white shadow-sm">
-      <div className="container-header flex h-16 items-center gap-4 md:gap-6">
-        <Logo />
+      <AppBanner />
+      <div className="container-header flex h-16 items-center gap-3 md:gap-6">
+        <MobileMenu categories={categories} />
+        <span className="hidden md:block">
+          <Logo />
+        </span>
         <Link href="/help" className="hidden items-center gap-2 lg:flex">
           <Smartphone className="size-6 text-primary-700" />
           <span className="text-[11px] leading-tight text-ink-600">
@@ -242,9 +247,9 @@ export function Header() {
           </span>
         </Link>
         <Suspense fallback={<div className="h-10 flex-1" />}>
-          <SearchBar className="hidden flex-1 md:block" />
+          <SearchBar className="min-w-0 flex-1" />
         </Suspense>
-        <div className="ml-auto flex items-center gap-5">
+        <div className="ml-auto hidden items-center gap-5 md:flex">
           <div className="hidden md:block">
             <AccountMenu />
           </div>
@@ -297,11 +302,6 @@ export function Header() {
 
       <CategoryNav categories={categories} />
 
-      <div className="container-header pb-2 md:hidden">
-        <Suspense fallback={<div className="h-10" />}>
-          <SearchBar />
-        </Suspense>
-      </div>
     </header>
   );
 }

@@ -197,10 +197,10 @@ export default function CheckoutScreen() {
             ))}
             <View className="flex-row items-center justify-between px-3 py-3">
               <View>
-                <Text className="text-base font-medium text-ink-900">Standard Delivery</Text>
-                {eta ? (
+                <Text className="text-base font-medium text-ink-900">{g.delivery.by === 'SHOP' ? `Shop delivery · ${g.delivery.courier}` : 'Standard Delivery'}</Text>
+                {g.delivery.eta ?? eta ? (
                   <Text className="text-sm text-ink-500">
-                    Receive within <Text className="text-primary-700">{eta}</Text>
+                    Receive within <Text className="text-primary-700">{g.delivery.eta ?? eta}</Text>
                   </Text>
                 ) : null}
               </View>
@@ -236,7 +236,7 @@ export default function CheckoutScreen() {
         {/* ── Payment ── */}
         <Text className="text-xl font-semibold text-ink-900">Select payment method</Text>
         <View className="rounded-xl bg-white px-4">
-          {methods.map(({ method: m, enabled }, i) => {
+          {methods.map(({ method: m, enabled, note }, i) => {
             const Icon = METHOD_ICON[m];
             return (
               <Pressable
@@ -249,7 +249,7 @@ export default function CheckoutScreen() {
                 <Icon size={26} color={colors.accent} />
                 <View className="flex-1">
                   <Text className="text-lg font-medium text-ink-900">{t.checkout.methods[m]}</Text>
-                  {!enabled ? <Text className="text-sm text-ink-500">{t.checkout.unavailableMethod}</Text> : null}
+                  {!enabled ? <Text className="text-sm text-ink-500">{note ?? t.checkout.unavailableMethod}</Text> : null}
                 </View>
               </Pressable>
             );

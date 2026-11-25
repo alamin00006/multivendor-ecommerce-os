@@ -3,6 +3,7 @@
 import { useChatLive, useChatUnreadQuery, useIsAuthenticated, useMarketplaceMode } from '@marketbd/api-client';
 import {
   BadgePercent,
+  Bike,
   Image as ImageIcon,
   LayoutDashboard,
   Link2,
@@ -14,8 +15,8 @@ import {
   Package,
   RotateCcw,
   Settings,
-  ShoppingBasket,
   ShoppingBag,
+  ShoppingBasket,
   Store,
   Tags,
   Truck,
@@ -38,7 +39,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/courier', label: 'Couriers', icon: Truck },
     { href: '/messages', label: 'Messages', icon: MessagesSquare, badge: chatUnread?.count },
     { href: '/products', label: multiVendor ? 'Products' : 'Store products', icon: Package },
-    ...(multiVendor ? [{ href: '/sellers', label: 'Sellers', icon: Store }, { href: '/payouts', label: 'Payouts', icon: Wallet }] : []),
+    ...(multiVendor ? [{ href: '/sellers', label: 'Sellers', icon: Store }, { href: '/shop-delivery', label: 'Shop delivery', icon: Bike }, { href: '/payouts', label: 'Payouts', icon: Wallet }] : []),
     { href: '/users', label: 'Users', icon: Users },
     { href: '/categories', label: 'Categories', icon: ListTree },
     { href: '/brands', label: 'Brands', icon: Tags },

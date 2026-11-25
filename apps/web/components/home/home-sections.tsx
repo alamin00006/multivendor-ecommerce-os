@@ -92,17 +92,17 @@ export function QuickLinks({ links }: { links: QuickLinkView[] }) {
   const { pick } = useI18n();
   if (links.length === 0) return null;
   return (
-    <div className="scrollbar-none -mx-3 flex gap-2.5 overflow-x-auto px-3 md:mx-0 md:grid md:grid-cols-6 md:gap-3 md:px-0">
+    <div className="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 md:mx-0 md:grid md:grid-cols-6 md:gap-3 md:px-0">
       {links.slice(0, 6).map((l) => (
         <Link
           key={l.id}
           href={linkHref(l.linkType, l.linkValue)}
-          className="flex h-14 shrink-0 items-center gap-2.5 rounded-lg bg-white px-3 shadow-card transition hover:shadow-raised md:h-16 md:justify-center"
+          className="flex w-[72px] shrink-0 flex-col items-center gap-1.5 rounded-lg bg-white px-1.5 py-2.5 shadow-card transition hover:shadow-raised md:h-16 md:w-auto md:flex-row md:justify-center md:gap-2.5 md:px-3 md:py-0"
         >
-          <span className="relative size-8 shrink-0 overflow-hidden rounded-md">
-            <Image src={l.iconUrl} alt="" fill sizes="32px" className="object-cover" />
+          <span className="relative size-9 shrink-0 overflow-hidden rounded-md md:size-8">
+            <Image src={l.iconUrl} alt="" fill sizes="36px" className="object-cover" />
           </span>
-          <span className="whitespace-nowrap text-sm font-medium text-ink-800">{pick(l.label, l.labelBn)}</span>
+          <span className="line-clamp-2 text-center text-[11px] font-medium leading-tight text-ink-800 md:whitespace-nowrap md:text-sm">{pick(l.label, l.labelBn)}</span>
         </Link>
       ))}
     </div>
@@ -197,9 +197,9 @@ export function CategoryGrid({ categories }: { categories: CategoryNode[] }) {
   return (
     <section>
       <SectionHeader
-        title={t.home.recommendedCategories}
+        title={t.common.categories}
         action={
-          <div className="hidden gap-1.5 md:flex">
+          <div className="flex gap-1.5">
             <button type="button" onClick={() => scroll(-1)} className="rounded-full bg-white p-1.5 shadow-card hover:bg-ink-50" aria-label="Previous">
               <ChevronLeft className="size-4" />
             </button>
@@ -211,8 +211,8 @@ export function CategoryGrid({ categories }: { categories: CategoryNode[] }) {
       />
       <div ref={row} className="scrollbar-none -mx-3 flex gap-3 overflow-x-auto scroll-smooth px-3 md:mx-0 md:px-0">
         {categories.map((c) => (
-          <Link key={c.id} href={`/c/${c.slug}`} className="group flex w-24 shrink-0 flex-col items-center gap-2 md:w-[calc((100%-7*0.75rem)/8)]">
-            <span className="relative aspect-square w-full overflow-hidden rounded-xl bg-white">
+          <Link key={c.id} href={`/c/${c.slug}`} className="group flex w-[84px] shrink-0 flex-col items-center gap-2 md:w-[calc((100%-7*0.75rem)/8)]">
+            <span className="relative aspect-square w-full overflow-hidden rounded-full bg-white">
               {c.imageUrl && (
                 <Image src={c.imageUrl} alt="" fill sizes="(max-width: 768px) 96px, 150px" className="object-cover transition group-hover:scale-105" />
               )}

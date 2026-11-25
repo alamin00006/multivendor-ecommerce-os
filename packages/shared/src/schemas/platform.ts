@@ -32,6 +32,8 @@ export const UpdatePlatformSettingsSchema = z
     /** Brand colours (primary = shade 700, accent = shade 500). */
     brandPrimary: HexColorSchema,
     brandAccent: HexColorSchema,
+    /** Poisha. */
+    ownDeliveryDueLimit: z.coerce.number().int().min(0).max(100_000_000),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'Nothing to update');
