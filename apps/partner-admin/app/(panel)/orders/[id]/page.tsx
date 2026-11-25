@@ -77,7 +77,25 @@ export default function SellerOrderPage() {
             <AddressBlock address={order.shippingAddress} />
             <p className="mt-2 text-xs text-ink-500">Payment: {order.paymentMethod}</p>
           </section>
-          <ShipmentPanel scope="seller" orderId={order.orderId} subOrderId={order.id} status={order.status} shipment={order.shipment} />
+          {order.fulfillment === 'SELLER' ? (
+            <section className="card space-y-2 p-4 text-sm">
+              <h3 className="font-semibold">Your courier: {order.courierName}</h3>
+              <p className="text-ink-600">You deliver this package. Book it with your courier, then mark it shipped with the tracking number.</p>
+              {order.sellerCollectsCash && (
+                <p className="rounded-md bg-amber-50 p-2.5 text-amber-800">
+                  Cash on Delivery: your courier collects <b>{money(order.total)}</b> for you. MarketBD’s commission ({money(order.commissionAmount)}) is taken from your balance.
+                </p>
+              )}
+              {order.dispute && (
+                <p className="rounded-md bg-red-50 p-2.5 text-red-800">
+                  Customer says it was not received: “{order.dispute.note}”{' '}
+                  {order.dispute.resolution ? `— resolved as ${order.dispute.resolution === 'DELIVERED' ? 'delivered' : 'not delivered'}.` : '— MarketBD support is checking.'}
+                </p>
+              )}
+            </section>
+          ) : (
+            <ShipmentPanel scope="seller" orderId={order.orderId} subOrderId={order.id} status={order.status} shipment={order.shipment} />
+          )}
           <section className="card space-y-3 p-4">
             <h3 className="font-semibold">Fulfilment</h3>
             {next.length === 0 ? (
@@ -85,7 +103,12 @@ export default function SellerOrderPage() {
             ) : (
               <>
                 {next.includes('SHIPPED') && (
-                  <input className="input" placeholder="Tracking number (other courier)" value={tracking} onChange={(e) => setTracking(e.target.value)} />
+                  <input
+                    className="input"
+                    placeholder={order.fulfillment === 'SELLER' ? `${order.courierName ?? 'Courier'} tracking number (required)` : 'Tracking number (other courier)'}
+                    value={tracking}
+                    onChange={(e) => setTracking(e.target.value)}
+                  />
                 )}
                 <input className="input" placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
                 <div className="flex flex-wrap gap-2">

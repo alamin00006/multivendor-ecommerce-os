@@ -21,6 +21,11 @@ const DAY = 86_400_000;
 /** Sub-orders that earn money: delivered, or delivered with a return being looked at. */
 const EARNING_STATUSES = ['DELIVERED', 'RETURN_REQUESTED'] as const;
 const OPEN_RETURN = ['REQUESTED', 'APPROVED'] as const;
+/** Earning packages, minus ones admin found were never delivered. */
+const EARNING_WHERE = {
+  status: { in: [...EARNING_STATUSES] },
+  OR: [{ disputeResolution: null }, { disputeResolution: { not: 'NOT_DELIVERED' } }],
+} satisfies Prisma.SubOrderWhereInput;
 
 const earningSelect = {
   id: true,
@@ -29,6 +34,9 @@ const earningSelect = {
   total: true,
   commissionRate: true,
   commissionAmount: true,
+  sellerCollectsCash: true,
+  disputedAt: true,
+  disputeResolution: true,
   order: { select: { orderNumber: true, channel: true } },
   history: { where: { toStatus: 'DELIVERED' }, orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
   returns: { where: { status: { in: [...OPEN_RETURN] } }, select: { id: true } },
@@ -56,6 +64,9 @@ const toPayoutView = (p: Payout): PayoutView => ({
  * The platform collects online and COD payments, so each delivered package earns (total − commission).
  * It is held for the return window, then becomes available to withdraw. Counter (POS) sales were paid
  * to the shop in cash, so they only owe the commission, which is taken from the balance straight away.
+ * The same goes for COD packages the shop delivered with its own courier (the courier pays the shop).
+ * A package the customer says never arrived is held until admin decides; if it really was not
+ * delivered it earns nothing.
  */
 @Injectable()
 export class PayoutsService {
@@ -67,11 +78,13 @@ export class PayoutsService {
   ) {}
 
   private row(s: EarningSubOrder, holdDays: number, now: number): EarningRow {
-    const pos = s.order.channel === 'POS';
+    // Cash already with the shop: only the commission is owed, and it is owed right away.
+    const pos = s.order.channel === 'POS' || s.sellerCollectsCash;
     const delivered = s.history[0]?.createdAt ?? null;
-    const openReturn = s.status === 'RETURN_REQUESTED' || s.returns.length > 0;
+    const openDispute = Boolean(s.disputedAt) && !s.disputeResolution;
+    const openReturn = s.status === 'RETURN_REQUESTED' || s.returns.length > 0 || openDispute;
     const releaseAt = delivered ? delivered.getTime() + holdDays * DAY : null;
-    const available = pos || (!openReturn && releaseAt !== null && releaseAt <= now);
+    const available = (pos && !openDispute) || (!openReturn && releaseAt !== null && releaseAt <= now);
     return {
       subOrderId: s.id,
       orderId: s.orderId,
@@ -91,9 +104,10 @@ export class PayoutsService {
     const [seller, holdDays, subs, payouts] = await Promise.all([
       this.prisma.sellerProfile.findUniqueOrThrow({ where: { id: sellerId }, select: { payoutAccount: true } }),
       this.settings.returnDays(),
-      this.prisma.subOrder.findMany({ where: { sellerId, status: { in: [...EARNING_STATUSES] } }, select: earningSelect }),
+      this.prisma.subOrder.findMany({ where: { sellerId, ...EARNING_WHERE }, select: earningSelect }),
       this.prisma.payout.groupBy({ by: ['status'], where: { sellerId }, _sum: { amount: true } }),
     ]);
+    const adjustments = (await this.prisma.sellerAdjustment.aggregate({ where: { sellerId }, _sum: { amount: true } }))._sum.amount ?? 0;
     const now = Date.now();
     const rows = subs.map((s) => this.row(s, holdDays, now));
     const sum = (list: EarningRow[], f: (r: EarningRow) => number) => list.reduce((t, r) => t + f(r), 0);
@@ -101,14 +115,17 @@ export class PayoutsService {
     const cleared = sum(rows.filter((r) => r.state === 'AVAILABLE'), (r) => r.net);
     const requested = paid('REQUESTED');
     const paidOut = paid('PAID');
+    const balance = cleared + adjustments - requested - paidOut;
     return {
       gross: sum(rows, (r) => r.total),
       commission: sum(rows, (r) => r.commissionAmount),
       net: sum(rows, (r) => r.net),
       onHold: sum(rows.filter((r) => r.state === 'ON_HOLD'), (r) => r.net),
-      available: Math.max(0, cleared - requested - paidOut),
+      available: Math.max(0, balance),
       requested,
       paidOut,
+      adjustments,
+      balance,
       holdDays,
       minPayout: MIN_PAYOUT,
       payoutAccount: (seller.payoutAccount as PayoutAccountView | null) ?? null,
@@ -121,7 +138,7 @@ export class PayoutsService {
 
   async ledger(userId: string, query: { page: number; limit: number }) {
     const seller = await this.access.requireActiveSeller(userId);
-    const where: Prisma.SubOrderWhereInput = { sellerId: seller.id, status: { in: [...EARNING_STATUSES] } };
+    const where: Prisma.SubOrderWhereInput = { sellerId: seller.id, ...EARNING_WHERE };
     const [rows, total, holdDays] = await Promise.all([
       this.prisma.subOrder.findMany({ where, select: earningSelect, orderBy: { updatedAt: 'desc' }, ...skipTake(query.page, query.limit) }),
       this.prisma.subOrder.count({ where }),

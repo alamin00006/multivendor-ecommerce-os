@@ -3,6 +3,7 @@
 import { errorMessage, useAdminOrderQuery, useAdminRefundMutation, useAdminSetOrderStatusMutation, useMarketplaceMode } from '@marketbd/api-client';
 import { fromPoisha, ORDER_STATUSES, type OrderStatus, toPoisha } from '@marketbd/shared';
 import { useParams } from 'next/navigation';
+import { PackageDelivery } from '@/components/package-dispute';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { AddressBlock, OrderItemRow, OrderTimeline, fmtDate, PageHeader, useI18n, Badge, Button, ErrorState, Modal, Skeleton, OrderStatusBadge, PaymentStatusBadge, ShipmentPanel } from '@marketbd/ui';
@@ -83,6 +84,7 @@ export default function AdminOrderPage() {
                 <span>Subtotal {money(sub.subtotal)} · Shipping {money(sub.shippingFee)} · Discount {money(sub.discount)}</span>
                 {showSellerInfo && <span>Commission {sub.commissionRate}% = {money(sub.commissionAmount)}</span>}
               </p>
+              <PackageDelivery orderId={order.id} sub={sub} />
             </section>
           ))}
           <section className="card p-4">
@@ -97,7 +99,9 @@ export default function AdminOrderPage() {
             {order.note && <p className="mt-2 rounded bg-ink-50 p-2 text-xs">Note: {order.note}</p>}
           </section>
           {order.channel !== 'POS' &&
-            order.subOrders.map((sub, i) => (
+            order.subOrders
+              .filter((sub) => sub.fulfillment !== 'SELLER')
+              .map((sub, i) => (
               <ShipmentPanel
                 key={sub.id}
                 scope="admin"

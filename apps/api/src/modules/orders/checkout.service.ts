@@ -16,6 +16,7 @@ import { type CartLine, toCartItemView } from '../cart/cart-pricing.js';
 import { CartService } from '../cart/cart.service.js';
 import { CouponsService } from '../coupons/coupons.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { OwnDeliveryService, type ShopDelivery } from '../own-delivery/own-delivery.service.js';
 import { PaymentsService } from '../payments/payments.service.js';
 import { PlatformModeService } from '../platform/platform-mode.service.js';
 import { SettingsService } from '../platform/settings.service.js';
@@ -28,7 +29,12 @@ interface PricedGroup {
   lines: Array<{ line: CartLine; view: CartItemView }>;
   subtotal: number;
   shippingFee: number;
+  delivery?: ShopDelivery;
 }
+
+/** Shop names whose own-courier COD is paused (they owe too much commission). */
+const codPausedShops = (groups: PricedGroup[]) =>
+  groups.filter((g) => g.delivery?.own && g.delivery.codPaused).map((g) => g.lines[0]!.line.variant.product.seller.shopName);
 
 @Injectable()
 export class CheckoutService {
@@ -43,7 +49,21 @@ export class CheckoutService {
     private readonly mode: PlatformModeService,
     private readonly settings: SettingsService,
     private readonly notifications: NotificationsService,
+    private readonly ownDelivery: OwnDeliveryService,
   ) {}
+
+  /** Each shop's delivery: its own courier and fee when approved, otherwise MarketBD Delivery. */
+  private async applyDelivery(groups: PricedGroup[], zone: ShippingZone | null, platformFee: number): Promise<void> {
+    const map = await this.ownDelivery.forCheckout(
+      groups.map((g) => g.sellerId),
+      zone,
+      platformFee,
+    );
+    for (const g of groups) {
+      g.delivery = map.get(g.sellerId);
+      if (g.delivery) g.shippingFee = g.delivery.fee;
+    }
+  }
 
   /** Groups selected cart lines by seller. In single-vendor mode there is exactly one group. */
   /** shippingFee: per-package delivery fee in poisha (from Admin → Settings). */
@@ -86,7 +106,9 @@ export class CheckoutService {
       if (def) zone = def.area.isInsideDhaka ? 'INSIDE_DHAKA' : 'OUTSIDE_DHAKA';
     }
 
-    const groups = this.group(lines, okViews, await this.settings.shippingFee(zone));
+    const platformFee = await this.settings.shippingFee(zone);
+    const groups = this.group(lines, okViews, platformFee);
+    await this.applyDelivery(groups, zone, platformFee);
     const subtotal = groups.reduce((s, g) => s + g.subtotal, 0);
     const shippingFee = groups.reduce((s, g) => s + g.shippingFee, 0);
     let discount = 0;
@@ -108,7 +130,11 @@ export class CheckoutService {
       items: g.lines.map((l) => l.view),
       subtotal: g.subtotal,
       shippingFee: g.shippingFee,
+      delivery: g.delivery?.own
+        ? { by: 'SHOP' as const, courier: g.delivery.courier, eta: g.delivery.eta }
+        : { by: 'PLATFORM' as const, courier: null, eta: g.delivery?.eta ?? null },
     }));
+    const paused = codPausedShops(groups);
     return {
       groups: checkoutGroups,
       shippingZone: zone,
@@ -119,7 +145,11 @@ export class CheckoutService {
       coupon,
       couponError,
       blockedItems: views.length - okViews.length,
-      paymentMethods: this.payments.methods(),
+      paymentMethods: this.payments.methods().map((m) =>
+        m.method === 'COD' && paused.length
+          ? { ...m, enabled: false, note: `Not available for items from ${paused.join(', ')} right now. Pay online to order them.` }
+          : m,
+      ),
     };
   }
 
@@ -142,7 +172,13 @@ export class CheckoutService {
           );
         }
 
-        const groups = this.group(lines, views, await this.settings.shippingFee(zone));
+        const platformFee = await this.settings.shippingFee(zone);
+        const groups = this.group(lines, views, platformFee);
+        await this.applyDelivery(groups, zone, platformFee);
+        const paused = codPausedShops(groups);
+        if (input.paymentMethod === 'COD' && paused.length) {
+          throw new BadRequestException(`Cash on Delivery is not available for items from ${paused.join(', ')} right now. Please pay online.`);
+        }
         const sellers = await tx.sellerProfile.findMany({ where: { id: { in: groups.map((g) => g.sellerId) } } });
         for (const g of groups) g.commissionRate = num(sellers.find((s) => s.id === g.sellerId)?.commissionRate);
 
@@ -243,6 +279,9 @@ export class CheckoutService {
               total: g.subtotal + g.shippingFee - groupDiscount,
               commissionRate: g.commissionRate,
               commissionAmount: Math.round((commissionBase * g.commissionRate) / 100),
+              fulfillment: g.delivery?.own ? 'SELLER' : 'PLATFORM',
+              courierName: g.delivery?.own ? g.delivery.courier : null,
+              sellerCollectsCash: Boolean(g.delivery?.own) && input.paymentMethod === 'COD',
             },
           });
           await tx.orderStatusHistory.create({

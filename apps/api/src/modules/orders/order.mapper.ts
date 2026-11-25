@@ -99,6 +99,31 @@ export const toShipmentView = (s: Shipment): ShipmentView => ({
 
 const firstShipment = (rows: Shipment[]): ShipmentView | null => (rows[0] ? toShipmentView(rows[0]) : null);
 
+/** Delivery info shared by the customer/admin package view and the seller view. */
+const deliveryFields = (s: {
+  fulfillment: 'PLATFORM' | 'SELLER';
+  courierName: string | null;
+  sellerCollectsCash: boolean;
+  disputeNote: string | null;
+  disputedAt: Date | null;
+  disputeResolution: string | null;
+  disputeResolvedAt: Date | null;
+}) => ({
+  fulfillment: s.fulfillment,
+  courierName: s.courierName,
+  sellerCollectsCash: s.sellerCollectsCash,
+  dispute:
+    s.disputeNote && s.disputedAt
+      ? {
+          note: s.disputeNote,
+          createdAt: s.disputedAt.toISOString(),
+          resolution: (s.disputeResolution as 'DELIVERED' | 'NOT_DELIVERED' | null) ?? null,
+          resolvedAt: s.disputeResolvedAt?.toISOString() ?? null,
+        }
+      : null,
+});
+
+
 export const orderDetailInclude = {
   ...orderSummaryInclude,
   subOrders: {
@@ -160,6 +185,7 @@ export const toOrderDetail = (
     commissionAmount: s.commissionAmount,
     trackingNumber: s.trackingNumber,
     shipment: firstShipment(s.shipments),
+    ...deliveryFields(s),
     items: s.items.map(toItemView),
     history: s.history.map(toEvent),
   })),
@@ -226,6 +252,7 @@ export const toSellerOrderView = (s: SellerOrderRow): SellerOrderView => ({
   commissionAmount: s.commissionAmount,
   trackingNumber: s.trackingNumber,
   shipment: firstShipment(s.shipments),
+  ...deliveryFields(s),
   shippingAddress: asShippingAddress(s.order.shippingAddress),
   items: s.items.map(toItemView),
   history: s.history.map(toEvent),

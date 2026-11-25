@@ -182,6 +182,9 @@ export class OrdersService {
       include: { order: true },
     });
     if (!sub) throw new NotFoundException('Order not found');
+    if (input.status === 'SHIPPED' && sub.fulfillment === 'SELLER' && !input.trackingNumber?.trim()) {
+      throw new BadRequestException(`Enter the ${sub.courierName ?? 'courier'} tracking number`);
+    }
     await this.prisma.$transaction((tx) =>
       this.status.transitionSubOrder(tx, subOrderId, input.status, {
         actor: 'seller',

@@ -6,5 +6,6 @@ import { SellerReportsService } from './reports.service.js';
 @Module({
   controllers: [SellerPayoutsController, AdminPayoutsController],
   providers: [PayoutsService, SellerReportsService],
+  exports: [PayoutsService],
 })
 export class PayoutsModule {}

@@ -22,6 +22,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { OrdersModule } from './modules/orders/orders.module.js';
 import { PosModule } from './modules/pos/pos.module.js';
 import { PayoutsModule } from './modules/payouts/payouts.module.js';
+import { OwnDeliveryModule } from './modules/own-delivery/own-delivery.module.js';
 import { OrderStatusModule } from './modules/order-status/order-status.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
 import { PlatformModule } from './modules/platform/platform.module.js';
@@ -68,6 +69,7 @@ class HealthController {
     ShippingModule,
     PosModule,
     PayoutsModule,
+    OwnDeliveryModule,
     ReviewsModule,
     QuestionsModule,
     ChatModule,

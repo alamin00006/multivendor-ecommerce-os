@@ -23,6 +23,10 @@ interface Draft {
   endAt: string;
   isActive: boolean;
   sortOrder: number;
+  /** One rule per line. */
+  terms: string;
+  /** Comma separated. */
+  voucherCodes: string;
 }
 
 const fromView = (c: CampaignView): Draft => ({
@@ -39,6 +43,8 @@ const fromView = (c: CampaignView): Draft => ({
   endAt: toLocalInput(c.endAt),
   isActive: c.isActive,
   sortOrder: c.sortOrder,
+  terms: c.terms.join('\n'),
+  voucherCodes: c.voucherCodes.join(', '),
 });
 
 export default function AdminCampaignsPage() {
@@ -58,6 +64,8 @@ export default function AdminCampaignsPage() {
       bannerUrl: d.bannerUrl ?? '',
       startAt: fromLocalInput(d.startAt) ?? '',
       endAt: fromLocalInput(d.endAt) ?? '',
+      terms: d.terms.split('\n').map((t) => t.trim()).filter(Boolean),
+      voucherCodes: d.voucherCodes.split(/[\s,]+/).map((c) => c.trim().toUpperCase()).filter(Boolean),
     };
     const parsed = CampaignSchema.safeParse(body);
     if (!parsed.success) return setErrors(issuesToErrors(parsed.error.issues));
@@ -80,7 +88,7 @@ export default function AdminCampaignsPage() {
         actions={
           <Button
             onClick={() =>
-              setDraft({ slug: '', title: '', titleBn: '', description: '', bannerUrl: null, mobileBannerUrl: null, themeColor: '#08755a', type: 'MEGA_SALE', startAt: toLocalInput(new Date().toISOString()), endAt: '', isActive: true, sortOrder: 0 })
+              setDraft({ slug: '', title: '', titleBn: '', description: '', bannerUrl: null, mobileBannerUrl: null, themeColor: '#08755a', type: 'MEGA_SALE', startAt: toLocalInput(new Date().toISOString()), endAt: '', isActive: true, sortOrder: 0, terms: '', voucherCodes: '' })
             }
           >
             <Plus className="size-4" /> Campaign
@@ -148,6 +156,17 @@ export default function AdminCampaignsPage() {
             <div className="sm:col-span-2">
               <label className="label">Description</label>
               <textarea className="input h-20 py-2" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label">Vouchers to promote</label>
+              <input className="input font-mono uppercase" placeholder="SAVE10, FREESHIP" value={draft.voucherCodes} onChange={(e) => setDraft({ ...draft, voucherCodes: e.target.value })} />
+              <p className="mt-1 text-xs text-ink-400">Shown under the banner with a Collect button. Separate codes with commas.</p>
+              {errors.voucherCodes && <p className="field-error">{errors.voucherCodes}</p>}
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label">Terms & conditions</label>
+              <textarea className="input h-28 py-2" placeholder="One rule per line" value={draft.terms} onChange={(e) => setDraft({ ...draft, terms: e.target.value })} />
+              {errors.terms && <p className="field-error">{errors.terms}</p>}
             </div>
             <div>
               <label className="label">Starts</label>
