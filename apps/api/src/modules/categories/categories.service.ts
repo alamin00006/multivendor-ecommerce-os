@@ -5,7 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { PlatformModeService } from '../platform/platform-mode.service.js';
 
 /** withContent: include the (possibly long) SEO markdown — only for single-category and admin views. */
-const toNode = (c: Category, productCount?: number, withContent = false): CategoryNode => ({
+const toNode = (c: Category, productCount?: number, withContent = false, admin = false): CategoryNode => ({
   id: c.id,
   parentId: c.parentId,
   name: c.name,
@@ -17,6 +17,7 @@ const toNode = (c: Category, productCount?: number, withContent = false): Catego
   isActive: c.isActive,
   productCount,
   ...(withContent ? { seoContent: c.seoContent } : {}),
+  ...(admin ? { commissionRate: c.commissionRate === null ? null : Number(c.commissionRate) } : {}),
   children: [],
 });
 
@@ -70,7 +71,7 @@ export class CategoriesService {
   /** Admin tree including inactive categories. */
   async adminTree(): Promise<CategoryNode[]> {
     const categories = await this.prisma.category.findMany();
-    return buildTree(categories.map((c) => toNode(c, undefined, true)));
+    return buildTree(categories.map((c) => toNode(c, undefined, true, true)));
   }
 
   async bySlug(slug: string): Promise<CategoryNode & { breadcrumbs: CategoryRef[] }> {
@@ -121,6 +122,9 @@ export class CategoriesService {
       await this.prisma.category.create({
         data: { ...rest, parentId: parentId ?? null, sortOrder: Number(sortOrder ?? 0) },
       }),
+      undefined,
+      true,
+      true,
     );
   }
 
@@ -138,6 +142,9 @@ export class CategoriesService {
             : {}),
         },
       }),
+      undefined,
+      true,
+      true,
     );
   }
 

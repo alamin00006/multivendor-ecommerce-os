@@ -27,7 +27,7 @@ export default function AdminSellersPage() {
 
   return (
     <div>
-      <PageHeader title="Sellers" description="Approve new shops, suspend sellers and set commission." />
+      <PageHeader title="Sellers" description="Approve new shops, suspend sellers and set each shop’s default commission. A rate set on a category (Categories page) takes priority." />
       <div className="card">
         <div className="flex flex-wrap gap-2 border-b border-ink-100 p-3">
           <input className="input max-w-xs" placeholder="Shop or email" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
@@ -41,7 +41,7 @@ export default function AdminSellersPage() {
         {isLoading ? (
           <Skeleton className="m-4 h-32" />
         ) : (
-          <Table head={['Shop', 'Owner', 'Products', 'Commission %', 'Status', 'Joined', '']} empty={!data?.items.length ? <EmptyState icon={<Store />} title="No sellers" /> : null}>
+          <Table head={['Shop', 'Owner', 'Products', 'Default commission %', 'Status', 'Joined', '']} empty={!data?.items.length ? <EmptyState icon={<Store />} title="No sellers" /> : null}>
             {data?.items.map((s) => (
               <tr key={s.id}>
                 <td className="px-4 py-3">

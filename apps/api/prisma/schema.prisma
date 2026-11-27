@@ -472,6 +472,8 @@ model Payout {
 // ───────── Catalog ─────────
 
 model Category {
+  /// Commission % for products in this category (and sub-categories without their own). Null = use the parent's, then the shop's rate.
+  commissionRate Decimal? @db.Decimal(5, 2)
   id         String     @id @default(cuid())
   parentId   String?
   name       String

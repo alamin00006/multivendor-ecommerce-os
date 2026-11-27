@@ -13,6 +13,8 @@ export const CategorySchema = z.object({
   imageUrl: UrlSchema.nullable().optional(),
   sortOrder: z.coerce.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
+  /** Commission % for this category; null = use the parent category's, then the shop's rate. */
+  commissionRate: z.coerce.number().min(0).max(100).nullable().optional(),
   /** Markdown buying guide / FAQ shown under the category's product grid. */
   seoContent: z.string().max(30_000).nullable().optional(),
 });

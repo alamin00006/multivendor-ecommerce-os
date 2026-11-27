@@ -25,9 +25,11 @@ interface Draft {
   sortOrder: number;
   isActive: boolean;
   seoContent: string;
+  /** Empty = use the parent's rate, then the shop's. */
+  commissionRate: string;
 }
 
-const empty = (parentId: string | null = null): Draft => ({ name: '', nameBn: '', slug: '', parentId, iconUrl: null, imageUrl: null, sortOrder: 0, isActive: true, seoContent: '' });
+const empty = (parentId: string | null = null): Draft => ({ name: '', nameBn: '', slug: '', parentId, iconUrl: null, imageUrl: null, sortOrder: 0, isActive: true, seoContent: '', commissionRate: '' });
 
 export default function AdminCategoriesPage() {
   const { data: tree, isLoading } = useAdminCategoriesQuery();
@@ -38,12 +40,12 @@ export default function AdminCategoriesPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const edit = (c: CategoryNode) =>
-    setDraft({ id: c.id, name: c.name, nameBn: c.nameBn, slug: c.slug, parentId: c.parentId, iconUrl: c.iconUrl, imageUrl: c.imageUrl, sortOrder: c.sortOrder, isActive: c.isActive, seoContent: c.seoContent ?? '' });
+    setDraft({ id: c.id, name: c.name, nameBn: c.nameBn, slug: c.slug, parentId: c.parentId, iconUrl: c.iconUrl, imageUrl: c.imageUrl, sortOrder: c.sortOrder, isActive: c.isActive, seoContent: c.seoContent ?? '', commissionRate: c.commissionRate == null ? '' : String(c.commissionRate) });
 
   const save = async () => {
     if (!draft) return;
-    const { id, seoContent, ...rest } = draft;
-    const body = { ...rest, seoContent: seoContent.trim() || null };
+    const { id, seoContent, commissionRate, ...rest } = draft;
+    const body = { ...rest, seoContent: seoContent.trim() || null, commissionRate: commissionRate.trim() === '' ? null : Number(commissionRate) };
     const parsed = CategorySchema.safeParse(body);
     if (!parsed.success) return setErrors(issuesToErrors(parsed.error.issues));
     setErrors({});
@@ -64,6 +66,7 @@ export default function AdminCategoriesPage() {
         <span className="flex-1 text-sm">
           <b>{c.name}</b> <span className="text-ink-500">· {c.nameBn} · /{c.slug}</span>
         </span>
+        {c.commissionRate != null && <Badge tone="info">{c.commissionRate}% commission</Badge>}
         {!c.isActive && <Badge tone="danger">Hidden</Badge>}
         {depth === 0 && (
           <Button size="sm" variant="ghost" onClick={() => setDraft(empty(c.id))}>
@@ -126,6 +129,22 @@ export default function AdminCategoriesPage() {
             <div>
               <label className="label">Sort order</label>
               <input className="input" type="number" value={draft.sortOrder} onChange={(e) => setDraft({ ...draft, sortOrder: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="label" htmlFor="cat-commission">Commission %</label>
+              <input
+                id="cat-commission"
+                className="input"
+                type="number"
+                min={0}
+                max={100}
+                step={0.5}
+                placeholder={draft.parentId ? 'Same as parent category' : "Shop's own rate"}
+                value={draft.commissionRate}
+                onChange={(e) => setDraft({ ...draft, commissionRate: e.target.value })}
+              />
+              <p className="mt-1 text-xs text-ink-500">Charged on products in this category. Leave empty to use {draft.parentId ? 'the parent category’s rate' : 'each shop’s own rate'}.</p>
+              {errors.commissionRate && <p className="field-error">{errors.commissionRate}</p>}
             </div>
             <label className="flex items-center gap-2 pt-6 text-sm">
               <input type="checkbox" className="accent-primary-700" checked={draft.isActive} onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })} /> Visible

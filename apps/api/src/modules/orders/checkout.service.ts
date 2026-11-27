@@ -21,6 +21,7 @@ import { PaymentsService } from '../payments/payments.service.js';
 import { PlatformModeService } from '../platform/platform-mode.service.js';
 import { SettingsService } from '../platform/settings.service.js';
 import { toSellerSummary } from '../products/product.mapper.js';
+import { commissionFor } from './commission.js';
 import { orderSummaryInclude, toOrderSummary } from './order.mapper.js';
 
 interface PricedGroup {
@@ -268,6 +269,12 @@ export class CheckoutService {
         for (const [gi, g] of groups.entries()) {
           const groupDiscount = discounts[gi] ?? 0;
           const commissionBase = Math.max(0, g.subtotal - (itemsDiscounted ? groupDiscount : 0));
+          const commission = await commissionFor(
+            tx,
+            g.commissionRate,
+            g.lines.map(({ view }) => ({ productId: view.product.id, amount: view.lineTotal })),
+            commissionBase,
+          );
           const sub = await tx.subOrder.create({
             data: {
               orderId: created.id,
@@ -277,8 +284,8 @@ export class CheckoutService {
               shippingFee: g.shippingFee,
               discount: groupDiscount,
               total: g.subtotal + g.shippingFee - groupDiscount,
-              commissionRate: g.commissionRate,
-              commissionAmount: Math.round((commissionBase * g.commissionRate) / 100),
+              commissionRate: commission.rate,
+              commissionAmount: commission.amount,
               fulfillment: g.delivery?.own ? 'SELLER' : 'PLATFORM',
               courierName: g.delivery?.own ? g.delivery.courier : null,
               sellerCollectsCash: Boolean(g.delivery?.own) && input.paymentMethod === 'COD',

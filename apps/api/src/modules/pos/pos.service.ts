@@ -6,6 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { OrdersService } from '../orders/orders.service.js';
 import { SettingsService } from '../platform/settings.service.js';
 import { SellerAccessService } from '../sellers/seller-access.service.js';
+import { commissionFor } from '../orders/commission.js';
 
 /** Placeholder account that owns counter sales made to customers without a MarketBD account. */
 export const WALK_IN_EMAIL = 'walk-in@pos.marketbd.local';
@@ -138,6 +139,12 @@ export class PosService {
             note: input.note,
           },
         });
+        const commission = await commissionFor(
+          tx,
+          rate,
+          lines.map((l) => ({ productId: l.v.productId, amount: l.lineTotal })),
+          total,
+        );
         const sub = await tx.subOrder.create({
           data: {
             orderId: order.id,
@@ -147,8 +154,8 @@ export class PosService {
             shippingFee: 0,
             discount: input.discount,
             total,
-            commissionRate: rate,
-            commissionAmount: Math.round((total * rate) / 100),
+            commissionRate: commission.rate,
+            commissionAmount: commission.amount,
           },
         });
         const note = `Sold at the counter by ${cashier.name}`;

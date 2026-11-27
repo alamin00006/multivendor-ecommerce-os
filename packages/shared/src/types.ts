@@ -136,6 +136,8 @@ export interface CategoryNode {
   sortOrder: number;
   isActive: boolean;
   productCount?: number;
+  /** Admin only: commission % set on this category (null = inherited). */
+  commissionRate?: number | null;
   /** Only included for a single category (category page, admin). */
   seoContent?: string | null;
   children: CategoryNode[];
