@@ -68,6 +68,17 @@ export class SettingsService {
     return (await this.get()).returnDays;
   }
 
+  /** Saves non-public settings (e.g. order messages) and refreshes the cache. */
+  async save(data: Prisma.PlatformSettingUpdateInput, actorId: string): Promise<PlatformSetting> {
+    const row = await this.prisma.platformSetting.upsert({
+      where: { id: 1 },
+      update: { ...data, updatedById: actorId },
+      create: { id: 1, ...(data as Prisma.PlatformSettingCreateInput), updatedById: actorId },
+    });
+    this.cached = { row, expiresAt: Date.now() + CACHE_TTL_MS };
+    return row;
+  }
+
   async update(input: UpdatePlatformSettingsPayload, actorId: string): Promise<PublicSettings> {
     const { socialLinks, ...rest } = input;
     const data: Prisma.PlatformSettingUpdateInput = {

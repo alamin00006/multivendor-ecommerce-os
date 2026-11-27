@@ -25,6 +25,7 @@ import { env } from '../../config/env.js';
 import type { CourierStore, SellerProfile, Shipment } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { OrderMessagesService } from '../notifications/order-messages.service.js';
 import { courierPath } from '../order-status/order-status.rules.js';
 import { OrderStatusService, statusLabel } from '../order-status/order-status.service.js';
 import { asShippingAddress, toShipmentView } from '../orders/order.mapper.js';
@@ -75,6 +76,7 @@ export class ShippingService implements OnModuleInit, OnModuleDestroy {
     private readonly status: OrderStatusService,
     private readonly notifications: NotificationsService,
     private readonly access: SellerAccessService,
+    private readonly messages: OrderMessagesService,
   ) {}
 
   onModuleInit(): void {
@@ -349,6 +351,7 @@ export class ShippingService implements OnModuleInit, OnModuleDestroy {
       for (const step of path) await this.status.transitionSubOrder(tx, sub.id, step, { actor: 'courier', note });
     });
     await this.notifyCustomer(sub.order.userId, sub.order.id, sub.order.orderNumber, target);
+    this.messages.statusChanged(sub.order.id, target, sub.id);
     if (effect === 'returned') {
       await this.notifications.notify(
         sub.seller.userId,

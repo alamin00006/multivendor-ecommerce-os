@@ -97,6 +97,17 @@ export interface PublicSettings {
   };
 }
 
+/** Admin → Settings → Messages. `*Ready`: the server has a working email / SMS setup. */
+export interface MessagingSettingsView {
+  orderEmailsEnabled: boolean;
+  orderSmsEnabled: boolean;
+  orderSmsEvents: string[];
+  emailReady: boolean;
+  smsReady: boolean;
+  /** Sender address used on emails. */
+  mailFrom: string;
+}
+
 // ───────── Geo & addresses ─────────
 
 export interface GeoOption {

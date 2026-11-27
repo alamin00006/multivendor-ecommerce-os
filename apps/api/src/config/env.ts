@@ -29,6 +29,15 @@ const EnvSchema = z.object({
   SMS_GATEWAY_URL: z.string().default(''),
   SMS_GATEWAY_API_KEY: z.string().default(''),
   SMS_SENDER_ID: z.string().default('MarketBD'),
+  /** console = log emails to the API log (development); smtp = send through the SMTP server below. */
+  MAIL_PROVIDER: z.enum(['console', 'smtp']).default('console'),
+  SMTP_HOST: z.string().default(''),
+  SMTP_PORT: z.coerce.number().int().default(587),
+  SMTP_SECURE: bool,
+  SMTP_USER: z.string().default(''),
+  SMTP_PASS: z.string().default(''),
+  /** Sender shown on emails, e.g. `AroLagbe <no-reply@arolagbe.com>`. */
+  MAIL_FROM: z.string().default(''),
 
   S3_ENDPOINT: z.string().url(),
   S3_REGION: z.string().default('us-east-1'),

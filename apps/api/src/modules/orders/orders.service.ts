@@ -18,6 +18,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { PaginatedResult, skipTake } from '../../common/pagination.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { OrderMessagesService } from '../notifications/order-messages.service.js';
 import { OrderStatusService, statusLabel } from '../order-status/order-status.service.js';
 import { PaymentsService } from '../payments/payments.service.js';
 import { PlatformModeService } from '../platform/platform-mode.service.js';
@@ -47,6 +48,7 @@ export class OrdersService {
     private readonly settings: SettingsService,
     private readonly access: SellerAccessService,
     private readonly notifications: NotificationsService,
+    private readonly messages: OrderMessagesService,
   ) {}
 
   private listWhere(query: ListQuery): Prisma.OrderWhereInput {
@@ -115,6 +117,7 @@ export class OrdersService {
     await this.prisma.$transaction((tx) =>
       this.status.transitionOrder(tx, id, 'CANCELLED', { actor: 'customer', actorId: userId, note: input.reason }),
     );
+    this.messages.statusChanged(id, 'CANCELLED');
     return this.getMine(userId, id);
   }
 
@@ -194,6 +197,7 @@ export class OrdersService {
       }),
     );
     await this.notifyCustomer(sub.order.userId, sub.order.id, sub.order.orderNumber, input.status);
+    this.messages.statusChanged(sub.order.id, input.status, subOrderId);
     return this.getForSeller(userId, subOrderId);
   }
 
@@ -254,6 +258,7 @@ export class OrdersService {
       }
     });
     await this.notifyCustomer(order.userId, order.id, order.orderNumber, input.status);
+    this.messages.statusChanged(order.id, input.status, subOrderId);
     return this.getAny(id);
   }
 

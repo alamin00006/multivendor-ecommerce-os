@@ -164,3 +164,36 @@ export const ActivityListQuerySchema = PaginationQuerySchema.extend({
   q: z.string().trim().max(80).optional(),
 });
 export type ActivityListQuery = z.input<typeof ActivityListQuerySchema>;
+
+// ───────── Order emails & SMS ─────────
+
+export const ORDER_MESSAGE_EVENTS = ['PLACED', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'] as const;
+export type OrderMessageEvent = (typeof ORDER_MESSAGE_EVENTS)[number];
+export const ORDER_MESSAGE_EVENT_LABEL: Record<OrderMessageEvent, string> = {
+  PLACED: 'Order placed',
+  PAID: 'Online payment received',
+  SHIPPED: 'Handed to courier (with tracking)',
+  DELIVERED: 'Delivered',
+  CANCELLED: 'Cancelled',
+  REFUNDED: 'Refunded',
+};
+
+export const MessagingSettingsSchema = z.object({
+  orderEmailsEnabled: z.boolean(),
+  orderSmsEnabled: z.boolean(),
+  orderSmsEvents: z.array(z.enum(ORDER_MESSAGE_EVENTS)).max(ORDER_MESSAGE_EVENTS.length),
+});
+export type MessagingSettingsInput = z.infer<typeof MessagingSettingsSchema>;
+
+/** `to` is an email address for `email`, a Bangladeshi mobile number for `sms`. */
+export const MessagingTestSchema = z
+  .object({ channel: z.enum(['email', 'sms']), to: z.string().trim().min(3).max(254) })
+  .transform((v, ctx) => {
+    const parsed = (v.channel === 'email' ? EmailSchema : BdPhoneSchema).safeParse(v.to);
+    if (!parsed.success) {
+      ctx.addIssue({ code: 'custom', path: ['to'], message: v.channel === 'email' ? 'Enter a valid email address' : 'Enter a valid mobile number' });
+      return z.NEVER;
+    }
+    return { channel: v.channel, to: parsed.data };
+  });
+export type MessagingTestInput = z.infer<typeof MessagingTestSchema>;

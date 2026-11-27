@@ -15,6 +15,7 @@ export * from './endpoints/pos.js';
 export * from './endpoints/seller-business.js';
 export * from './endpoints/push.js';
 export * from './endpoints/staff.js';
+export * from './endpoints/messaging.js';
 export * from './endpoints/seller-documents.js';
 export * from './endpoints/shipping.js';
 export * from './endpoints/own-delivery.js';

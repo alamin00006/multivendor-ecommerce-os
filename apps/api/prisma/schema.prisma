@@ -230,6 +230,11 @@ model PlatformSetting {
   brandAccent          String   @default("#f55a36")
   /// Most a shop delivering COD with its own courier may owe in commission before COD is paused (poisha).
   ownDeliveryDueLimit  Int      @default(500000)
+  /// Order updates by email (to the customer's account email) and SMS (to the delivery phone).
+  orderEmailsEnabled   Boolean  @default(true)
+  orderSmsEnabled      Boolean  @default(false)
+  /// Which order events also send an SMS (see ORDER_MESSAGE_EVENTS).
+  orderSmsEvents       String[] @default(["PLACED", "SHIPPED", "DELIVERED"])
   updatedById          String?
   updatedAt            DateTime @updatedAt
 }

@@ -4,6 +4,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { env } from '../../config/env.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { OrderMessagesService } from '../notifications/order-messages.service.js';
 import { asShippingAddress } from '../orders/order.mapper.js';
 import { OrderStatusService } from '../order-status/order-status.service.js';
 import { BkashGateway } from './bkash.gateway.js';
@@ -22,6 +23,7 @@ export class PaymentsService {
     private readonly sslcommerz: SslCommerzGateway,
     private readonly status: OrderStatusService,
     private readonly notifications: NotificationsService,
+    private readonly messages: OrderMessagesService,
   ) {}
 
   private gateway(method: PaymentMethod): PaymentGateway | null {
@@ -110,9 +112,9 @@ export class PaymentsService {
   }
 
   private async markPaid(paymentId: string, trxId: string | null, raw: Record<string, unknown>): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    const paidOrderId = await this.prisma.$transaction(async (tx) => {
       const payment = await tx.payment.findUniqueOrThrow({ where: { id: paymentId }, include: { order: true } });
-      if (payment.status === 'PAID') return;
+      if (payment.status === 'PAID') return null;
       await tx.payment.update({
         where: { id: paymentId },
         data: {
@@ -136,7 +138,9 @@ export class PaymentsService {
         `We received your payment for order ${payment.order.orderNumber}.`,
         { orderId: payment.orderId },
       );
+      return payment.orderId;
     });
+    if (paidOrderId) this.messages.notify(paidOrderId, 'PAID');
   }
 
   private async markFailed(paymentId: string, status: 'FAILED', raw: Record<string, unknown>): Promise<void> {
@@ -253,5 +257,6 @@ export class PaymentsService {
       `A refund for order ${payment.order.orderNumber} has been processed.`,
       { orderId },
     );
+    this.messages.notify(orderId, 'REFUNDED', { amount });
   }
 }

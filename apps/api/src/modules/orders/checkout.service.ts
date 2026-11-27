@@ -16,6 +16,7 @@ import { type CartLine, toCartItemView } from '../cart/cart-pricing.js';
 import { CartService } from '../cart/cart.service.js';
 import { CouponsService } from '../coupons/coupons.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { OrderMessagesService } from '../notifications/order-messages.service.js';
 import { OwnDeliveryService, type ShopDelivery } from '../own-delivery/own-delivery.service.js';
 import { PaymentsService } from '../payments/payments.service.js';
 import { PlatformModeService } from '../platform/platform-mode.service.js';
@@ -51,6 +52,7 @@ export class CheckoutService {
     private readonly settings: SettingsService,
     private readonly notifications: NotificationsService,
     private readonly ownDelivery: OwnDeliveryService,
+    private readonly messages: OrderMessagesService,
   ) {}
 
   /** Each shop's delivery: its own courier and fee when approved, otherwise MarketBD Delivery. */
@@ -351,6 +353,7 @@ export class CheckoutService {
       `Your order ${order.orderNumber} has been placed successfully.`,
       { orderId: order.id },
     );
+    this.messages.notify(order.id, 'PLACED');
 
     let payment: PaymentInitResult | null = null;
     if (input.paymentMethod !== 'COD') {

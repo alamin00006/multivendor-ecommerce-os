@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader, Button, cn, Modal, Skeleton } from '@marketbd/ui';
 import { BrandColorsForm } from '@/components/brand-colors-form';
+import { MessagingSettingsForm } from '@/components/messaging-settings-form';
 import { StoreSettingsForm } from '@/components/store-settings-form';
 
 export default function SettingsPage() {
@@ -47,6 +48,7 @@ export default function SettingsPage() {
 
       <BrandColorsForm key={`${data.theme.primary}${data.theme.accent}`} theme={data.theme} />
       <StoreSettingsForm settings={data} />
+      <MessagingSettingsForm />
 
       <Modal open={confirming} onClose={() => setConfirming(false)} title={target ? 'Turn multi-vendor ON?' : 'Switch to single-vendor store?'}>
         <div className="space-y-3 text-sm text-ink-700">
