@@ -391,6 +391,7 @@ model SellerProfile {
   products       Product[]
   subOrders      SubOrder[]
   adjustments    SellerAdjustment[]
+  courierAccounts SellerCourierAccount[]
   conversations  Conversation[]
   coupons        Coupon[]
   payouts        Payout[]
@@ -685,6 +686,8 @@ model Shipment {
   collectedAmount Int?
   /// Courier-side time of the last applied update, used to ignore out-of-order webhooks.
   courierUpdatedAt DateTime?
+  /// Shop whose own courier account the parcel was booked on; null = the platform's account.
+  accountSellerId  String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   subOrder        SubOrder        @relation(fields: [subOrderId], references: [id], onDelete: Cascade)
@@ -1073,4 +1076,23 @@ model SellerAdjustment {
   seller      SellerProfile @relation(fields: [sellerId], references: [id])
 
   @@index([sellerId, createdAt])
+}
+
+/// A shop's own courier account (own delivery): parcels are booked on the shop's account and the
+/// courier reports status to the shop's own webhook URL. Credentials are stored encrypted.
+model SellerCourierAccount {
+  sellerId        String
+  provider        CourierProvider
+  enabled         Boolean       @default(false)
+  sandbox         Boolean       @default(false)
+  /// AES-256-GCM encrypted JSON of the courier's credentials.
+  credentials     String?
+  webhookSecret   String
+  /// The shop's pickup store id at the courier (couriers with per-shop stores, e.g. Pathao).
+  storeExternalId String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  seller          SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@id([sellerId, provider])
 }

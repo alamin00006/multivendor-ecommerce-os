@@ -93,9 +93,16 @@ export default function SellerOrderPage() {
                 </p>
               )}
             </section>
-          ) : (
-            <ShipmentPanel scope="seller" orderId={order.orderId} subOrderId={order.id} status={order.status} shipment={order.shipment} />
-          )}
+          ) : null}
+          <ShipmentPanel
+            scope="seller"
+            own={order.fulfillment === 'SELLER'}
+            title={order.fulfillment === 'SELLER' ? 'Book on your courier account' : 'Courier'}
+            orderId={order.orderId}
+            subOrderId={order.id}
+            status={order.status}
+            shipment={order.shipment}
+          />
           <section className="card space-y-3 p-4">
             <h3 className="font-semibold">Fulfilment</h3>
             {next.length === 0 ? (

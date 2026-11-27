@@ -11,3 +11,6 @@ apps/api/src/generated/
 apps/mobile/ios/
 apps/mobile/android/
 .DS_Store
+
+# cartup demo import: local run state (IDs of this database)
+apps/api/scripts/cartup-import/manifest.json

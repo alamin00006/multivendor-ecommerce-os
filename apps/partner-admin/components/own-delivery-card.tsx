@@ -6,7 +6,7 @@ import { AlertTriangle, Bike, Clock, Truck } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Badge, Button, cn, issuesToErrors, Skeleton, useI18n } from '@marketbd/ui';
+import { Badge, Button, cn, issuesToErrors, OwnCourierAccountsManager, Skeleton, useI18n } from '@marketbd/ui';
 
 interface Draft {
   courier: OwnCourier;
@@ -218,6 +218,18 @@ export function OwnDeliveryCard() {
               Send for approval
             </Button>
           </div>
+        </div>
+      )}
+      {own && !editing && (
+        <div className="space-y-3 border-t border-ink-100 pt-4">
+          <div>
+            <h3 className="font-semibold">Connect your courier account (optional)</h3>
+            <p className="text-sm text-ink-600">
+              Add your own Steadfast or Pathao API keys to book parcels from each order on your account. Paste the webhook into the courier’s panel and orders move to
+              shipped and delivered by themselves. Without it, book with your courier yourself and enter the tracking number.
+            </p>
+          </div>
+          <OwnCourierAccountsManager />
         </div>
       )}
     </section>

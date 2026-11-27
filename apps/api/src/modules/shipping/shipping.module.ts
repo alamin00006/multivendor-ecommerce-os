@@ -7,6 +7,7 @@ import {
   AdminShippingController,
   CourierLocationsController,
   CourierWebhookController,
+  SellerOwnCourierController,
   SellerShippingController,
 } from './shipping.controller.js';
 import { ShippingService } from './shipping.service.js';
@@ -16,7 +17,7 @@ import { ShippingService } from './shipping.service.js';
  * CourierRegistry; the admin enables couriers and enters credentials in Admin → Couriers.
  */
 @Module({
-  controllers: [CourierLocationsController, SellerShippingController, AdminShippingController, CourierWebhookController],
+  controllers: [CourierLocationsController, SellerShippingController, SellerOwnCourierController, AdminShippingController, CourierWebhookController],
   providers: [PathaoAdapter, SteadfastAdapter, CourierRegistry, CourierAccountsService, ShippingService],
   exports: [ShippingService],
 })

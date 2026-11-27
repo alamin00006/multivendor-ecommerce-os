@@ -11,6 +11,7 @@ import {
   type BookShipmentInput,
   BookShipmentSchema,
   COURIER_CATALOG,
+  COURIER_PROVIDERS,
   type CourierLocation,
   type CourierOption,
   type CourierProvider,
@@ -115,6 +116,25 @@ export class ShippingService implements OnModuleInit, OnModuleDestroy {
     return this.optionsFor(await this.access.requireActiveSeller(userId));
   }
 
+  /** Couriers a shop can book its own-delivery parcels with (its own connected accounts). */
+  async ownOptions(userId: string): Promise<CourierOption[]> {
+    const seller = await this.access.requireActiveSeller(userId);
+    const rows = await this.accounts.sellerEnabledAccounts(seller.id);
+    return COURIER_PROVIDERS.filter((p) => rows.some((r) => r.provider === p)).map((provider) => {
+      const entry = COURIER_CATALOG[provider];
+      const row = rows.find((r) => r.provider === provider)!;
+      return {
+        provider,
+        name: entry.name,
+        supportsStores: entry.supportsStores,
+        needsWeight: entry.needsWeight,
+        note: entry.note ?? null,
+        store: null,
+        ready: !entry.supportsStores || Boolean(row.storeExternalId),
+      };
+    });
+  }
+
   async houseOptions(): Promise<CourierOption[]> {
     return this.optionsFor(await this.access.houseStore());
   }
@@ -186,7 +206,10 @@ export class ShippingService implements OnModuleInit, OnModuleDestroy {
     const input = BookShipmentSchema.parse(raw);
     const provider = input.provider;
     const entry = COURIER_CATALOG[provider];
-    const ctx = await this.accounts.context(provider);
+    const owner = await this.prisma.subOrder.findUniqueOrThrow({ where: { id: subOrderId }, select: { fulfillment: true, sellerId: true } });
+    // Own delivery: book on the shop's own courier account instead of the platform's.
+    const accountSellerId = owner.fulfillment === 'SELLER' ? owner.sellerId : null;
+    const ctx = accountSellerId ? await this.accounts.sellerContext(accountSellerId, provider) : await this.accounts.context(provider);
     // One booking at a time per package, so a double click cannot pay for two parcels.
     if (this.booking.has(subOrderId)) throw new ConflictException('This package is already being booked');
     this.booking.add(subOrderId);
@@ -196,7 +219,6 @@ export class ShippingService implements OnModuleInit, OnModuleDestroy {
         include: { order: true, items: true, shipments: { orderBy: { createdAt: 'desc' } } },
       });
       if (sub.order.channel === 'POS') throw new BadRequestException('Counter sales are not shipped');
-      if (sub.fulfillment === 'SELLER') throw new BadRequestException("This package is delivered by the shop's own courier");
       if (!BOOKABLE.includes(sub.status)) {
         throw new BadRequestException(
           sub.status === 'PENDING' ? 'Confirm the order before booking the courier' : `A ${sub.status.toLowerCase()} package cannot be booked`,
@@ -205,7 +227,10 @@ export class ShippingService implements OnModuleInit, OnModuleDestroy {
       if (sub.shipments.some((s) => s.active)) throw new ConflictException('This package is already booked with a courier');
 
       let storeExternalId: string | null = null;
-      if (entry.supportsStores) {
+      if (entry.supportsStores && accountSellerId) {
+        storeExternalId = (await this.accounts.sellerAccount(accountSellerId, provider))?.storeExternalId ?? null;
+        if (!storeExternalId) throw new BadRequestException(`Add your ${entry.name} store ID in Courier settings first`);
+      } else if (entry.supportsStores) {
         let store = await this.prisma.courierStore.findUnique({ where: { sellerId_provider: { sellerId: sub.sellerId, provider } } });
         if (!store) throw new BadRequestException(`Set up the ${entry.name} pickup address first (Courier settings)`);
         if (!store.externalId) store = await this.resolveStore(store);
@@ -241,6 +266,7 @@ export class ShippingService implements OnModuleInit, OnModuleDestroy {
             courierStatus: result.status.slice(0, 64),
             codAmount: cod,
             deliveryFee: poisha(result.deliveryFeeTaka),
+            accountSellerId,
           },
         });
         await tx.subOrder.update({ where: { id: sub.id }, data: { trackingNumber: result.trackingCode ?? result.consignmentId } });
@@ -263,22 +289,24 @@ export class ShippingService implements OnModuleInit, OnModuleDestroy {
     provider: CourierProvider,
     headers: Record<string, string | string[] | undefined>,
     body: unknown,
+    sellerId: string | null = null,
   ): Promise<{ httpStatus: number; headers: Record<string, string> }> {
-    const secret = await this.accounts.webhookSecret(provider);
+    const secret = sellerId ? ((await this.accounts.sellerAccount(sellerId, provider))?.webhookSecret ?? null) : await this.accounts.webhookSecret(provider);
     const result = this.registry.get(provider).webhook(headers, body, secret ?? randomBytes(24).toString('hex'));
     const out = { httpStatus: result.httpStatus, headers: result.responseHeaders ?? {} };
     if (!secret || !result.authorized) return { ...out, httpStatus: 401 };
-    if (result.update) await this.applyUpdate(provider, result.update);
+    if (result.update) await this.applyUpdate(provider, result.update, sellerId);
     return out;
   }
 
   /** Applies one courier update. Unknown consignments and out-of-order updates are ignored. */
-  async applyUpdate(provider: CourierProvider, update: WebhookUpdate): Promise<void> {
+  async applyUpdate(provider: CourierProvider, update: WebhookUpdate, accountSellerId: string | null = null): Promise<void> {
     const shipment = await this.prisma.shipment.findUnique({
       where: { provider_consignmentId: { provider, consignmentId: update.consignmentId } },
       include: { subOrder: { include: { order: true, seller: true } } },
     });
-    if (!shipment) return;
+    // The update must come from the account the parcel was booked on.
+    if (!shipment || shipment.accountSellerId !== accountSellerId) return;
     if (update.updatedAt && shipment.courierUpdatedAt && update.updatedAt < shipment.courierUpdatedAt) return;
 
     let effect = this.registry.get(provider).effect(update.status);
@@ -339,10 +367,16 @@ export class ShippingService implements OnModuleInit, OnModuleDestroy {
   /** Pulls the latest status of one booking from its courier. */
   async syncShipment(shipmentId: string): Promise<ShipmentView> {
     const shipment = await this.prisma.shipment.findUniqueOrThrow({ where: { id: shipmentId } });
-    const ctx = await this.accounts.context(shipment.provider, { requireEnabled: false });
+    const ctx = shipment.accountSellerId
+      ? await this.accounts.sellerContext(shipment.accountSellerId, shipment.provider, { requireEnabled: false })
+      : await this.accounts.context(shipment.provider, { requireEnabled: false });
     const res = await this.registry.get(shipment.provider).status(ctx, shipment.consignmentId);
     if (res.status) {
-      await this.applyUpdate(shipment.provider, { consignmentId: shipment.consignmentId, status: res.status, updatedAt: res.updatedAt, collectedAmount: null, deliveryFee: null });
+      await this.applyUpdate(
+        shipment.provider,
+        { consignmentId: shipment.consignmentId, status: res.status, updatedAt: res.updatedAt, collectedAmount: null, deliveryFee: null },
+        shipment.accountSellerId,
+      );
     } else {
       await this.prisma.shipment.update({ where: { id: shipmentId }, data: { updatedAt: new Date() } });
     }

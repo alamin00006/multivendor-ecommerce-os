@@ -67,6 +67,12 @@ export const CourierAccountSchema = z.object({
 });
 export type CourierAccountInput = z.input<typeof CourierAccountSchema>;
 
+/** A shop connects its own courier account (own delivery). Pathao also needs the shop's store id. */
+export const SellerCourierAccountSchema = CourierAccountSchema.extend({
+  storeExternalId: z.string().trim().max(40).optional(),
+});
+export type SellerCourierAccountInput = z.input<typeof SellerCourierAccountSchema>;
+
 const LocationId = z.coerce.number().int().positive();
 
 /** A seller's pickup point at the courier. City/zone/area ids come from the courier's location lists. */

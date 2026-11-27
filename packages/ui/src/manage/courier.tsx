@@ -9,11 +9,16 @@ import {
   useCourierCitiesQuery,
   useCourierOptionsQuery,
   useCourierZonesQuery,
+  useOwnCourierAccountsQuery,
+  useOwnCourierOptionsQuery,
   useRotateCourierWebhookSecretMutation,
+  useRotateOwnCourierWebhookSecretMutation,
+  useSaveOwnCourierAccountMutation,
   useSaveCourierAccountMutation,
   useSaveCourierStoreMutation,
   useSyncShipmentMutation,
   useTestCourierAccountMutation,
+  useTestOwnCourierAccountMutation,
 } from '@marketbd/api-client';
 import {
   COURIER_CATALOG,
@@ -22,6 +27,7 @@ import {
   type CourierProvider,
   CourierStoreSchema,
   type OrderStatus,
+  type SellerCourierAccountView,
   type ShipmentView,
 } from '@marketbd/shared';
 import { Copy, PlugZap, RefreshCw, Truck } from 'lucide-react';
@@ -38,11 +44,22 @@ const copy = (text: string) => {
 
 // ───── Admin → Couriers ─────
 
-function CourierAccountCard({ account }: { account: CourierAccountView }) {
+/**
+ * One courier account. `own` = the shop's own account (own delivery): saved under the seller, with
+ * the shop's own webhook URL and, for couriers with stores, the shop's store id at the courier.
+ */
+function CourierAccountCard({ account, own = false }: { account: CourierAccountView | SellerCourierAccountView; own?: boolean }) {
   const entry = COURIER_CATALOG[account.provider];
-  const [save, saving] = useSaveCourierAccountMutation();
-  const [test, testing] = useTestCourierAccountMutation();
-  const [rotate, rotating] = useRotateCourierWebhookSecretMutation();
+  const [saveAdmin, savingAdmin] = useSaveCourierAccountMutation();
+  const [testAdmin, testingAdmin] = useTestCourierAccountMutation();
+  const [rotateAdmin, rotatingAdmin] = useRotateCourierWebhookSecretMutation();
+  const [saveOwn, savingOwn] = useSaveOwnCourierAccountMutation();
+  const [testOwn, testingOwn] = useTestOwnCourierAccountMutation();
+  const [rotateOwn, rotatingOwn] = useRotateOwnCourierWebhookSecretMutation();
+  const saving = own ? savingOwn : savingAdmin;
+  const testing = own ? testingOwn : testingAdmin;
+  const rotating = own ? rotatingOwn : rotatingAdmin;
+  const [storeId, setStoreId] = useState('storeExternalId' in account ? (account.storeExternalId ?? '') : '');
   const [enabled, setEnabled] = useState(account.enabled);
   const [sandbox, setSandbox] = useState(account.sandbox);
   const [creds, setCreds] = useState<Record<string, string>>(() =>
@@ -51,7 +68,8 @@ function CourierAccountCard({ account }: { account: CourierAccountView }) {
 
   const submit = async () => {
     try {
-      await save({ provider: account.provider, body: { enabled, sandbox, credentials: creds } }).unwrap();
+      if (own) await saveOwn({ provider: account.provider, body: { enabled, sandbox, credentials: creds, storeExternalId: storeId.trim() } }).unwrap();
+      else await saveAdmin({ provider: account.provider, body: { enabled, sandbox, credentials: creds } }).unwrap();
       setCreds((c) => Object.fromEntries(Object.entries(c).map(([k, v]) => [k, entry.fields.find((f) => f.key === k)?.secret ? '' : v])));
       toast.success(`${entry.name} saved`);
     } catch (e) {
@@ -60,7 +78,7 @@ function CourierAccountCard({ account }: { account: CourierAccountView }) {
   };
   const onTest = async () => {
     try {
-      toast.success((await test(account.provider).unwrap()).message);
+      toast.success((await (own ? testOwn : testAdmin)(account.provider).unwrap()).message);
     } catch (e) {
       toast.error(errorMessage(e));
     }
@@ -68,7 +86,7 @@ function CourierAccountCard({ account }: { account: CourierAccountView }) {
   const onRotate = async () => {
     if (!confirm(`Create a new webhook secret for ${entry.name}? The old one stops working until you update it in the ${entry.name} panel.`)) return;
     try {
-      await rotate(account.provider).unwrap();
+      await (own ? rotateOwn : rotateAdmin)(account.provider).unwrap();
       toast.success('New webhook secret created');
     } catch (e) {
       toast.error(errorMessage(e));
@@ -80,15 +98,15 @@ function CourierAccountCard({ account }: { account: CourierAccountView }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-lg font-semibold"><Truck className="size-5" /> {entry.name}</h3>
         <div className="flex items-center gap-2">
-          {entry.supportsStores && <Badge tone="info">Pickup from each seller</Badge>}
+          {entry.supportsStores && !own && <Badge tone="info">Pickup from each seller</Badge>}
           <Badge tone={account.enabled ? 'success' : 'neutral'}>{account.enabled ? 'Enabled' : 'Off'}</Badge>
         </div>
       </div>
-      {entry.note && <p className="rounded bg-amber-50 p-2 text-xs text-amber-800">{entry.note}</p>}
+      {entry.note && !own && <p className="rounded bg-amber-50 p-2 text-xs text-amber-800">{entry.note}</p>}
 
       <div className="flex flex-wrap gap-5 text-sm">
         <label className="flex items-center gap-2">
-          <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} /> Enabled for booking
+          <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} /> {own ? 'Use for my own deliveries' : 'Enabled for booking'}
         </label>
         {entry.hasSandbox && (
           <label className="flex items-center gap-2">
@@ -116,6 +134,13 @@ function CourierAccountCard({ account }: { account: CourierAccountView }) {
             </div>
           );
         })}
+        {own && entry.supportsStores && (
+          <div>
+            <label className="label" htmlFor={`${account.provider}-store`}>Store ID</label>
+            <input id={`${account.provider}-store`} className="input" value={storeId} onChange={(e) => setStoreId(e.target.value)} />
+            <p className="mt-1 text-xs text-ink-500">{entry.name} merchant panel → Stores → the store your parcels are picked up from.</p>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -156,6 +181,22 @@ export function CourierAccountsManager() {
     <div className="space-y-4">
       {data.map((a) => (
         <CourierAccountCard key={`${a.provider}-${a.updatedAt ?? 'new'}`} account={a} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Seller Center: the shop's own courier accounts (own delivery). Parcels are then booked on the
+ * shop's account from each order, and the courier updates their status through the shop's webhook.
+ */
+export function OwnCourierAccountsManager() {
+  const { data, isLoading } = useOwnCourierAccountsQuery();
+  if (isLoading || !data) return <Skeleton className="h-64" />;
+  return (
+    <div className="space-y-4">
+      {data.map((a) => (
+        <CourierAccountCard key={`${a.provider}-${a.updatedAt ?? 'new'}`} account={a} own />
       ))}
     </div>
   );
@@ -283,6 +324,7 @@ export function ShipmentPanel({
   status,
   shipment,
   title = 'Courier',
+  own = false,
 }: {
   scope: CourierScope;
   orderId: string;
@@ -290,9 +332,13 @@ export function ShipmentPanel({
   status: OrderStatus;
   shipment: ShipmentView | null;
   title?: string;
+  /** Own-delivery package: book on the shop's own connected courier accounts. */
+  own?: boolean;
 }) {
   const { money } = useI18n();
-  const { data: options } = useCourierOptionsQuery(scope);
+  const { data: platformOptions } = useCourierOptionsQuery(scope, { skip: own });
+  const { data: ownOptions } = useOwnCourierOptionsQuery(undefined, { skip: !own });
+  const options = own ? ownOptions : platformOptions;
   const [book, booking] = useBookShipmentMutation();
   const [sync, syncing] = useSyncShipmentMutation();
   const [picked, setPicked] = useState<CourierProvider | ''>('');
@@ -305,7 +351,7 @@ export function ShipmentPanel({
   const option = usable.find((o) => o.provider === provider);
   const active = shipment?.active ? shipment : null;
   const canBook = !active && BOOKABLE.includes(status);
-  if (!shipment && (options ?? []).length === 0) return null;
+  if (!shipment && (options ?? []).length === 0 && !own) return null;
 
   const onBook = async () => {
     if (!provider) return;
@@ -345,7 +391,11 @@ export function ShipmentPanel({
       )}
       {canBook &&
         (usable.length === 0 ? (
-          <p className="text-xs text-ink-500">Add your pickup address in Courier settings to book a courier.</p>
+          <p className="text-xs text-ink-500">
+            {own
+              ? 'Connect your Steadfast or Pathao account in Courier settings to book from here, or book with your courier yourself and mark the order shipped with its tracking number.'
+              : 'Add your pickup address in Courier settings to book a courier.'}
+          </p>
         ) : (
           <div className="space-y-2">
             {usable.length > 1 && (

@@ -1,18 +1,20 @@
 import { Body, Controller, Get, HttpCode, Param, ParseIntPipe, Post, Put, Req, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
-import { BookShipmentSchema, CourierAccountSchema, CourierStoreSchema } from '@marketbd/shared';
+import { BookShipmentSchema, CourierAccountSchema, CourierStoreSchema, SellerCourierAccountSchema } from '@marketbd/shared';
 import type { Request, Response } from 'express';
 import { createZodDto } from 'nestjs-zod';
 import type { AuthUserContext } from '../../common/auth-user.js';
 import { CurrentUser, Public, RequireMultiVendor, ResponseMessage, Roles } from '../../common/decorators.js';
 import { CourierAccountsService } from './courier-accounts.service.js';
+import { SellerAccessService } from '../sellers/seller-access.service.js';
 import { CourierRegistry } from './couriers/courier.registry.js';
 import { ShippingService } from './shipping.service.js';
 
 class CourierStoreDto extends createZodDto(CourierStoreSchema) {}
 class CourierAccountDto extends createZodDto(CourierAccountSchema) {}
 class BookShipmentDto extends createZodDto(BookShipmentSchema) {}
+class SellerCourierAccountDto extends createZodDto(SellerCourierAccountSchema) {}
 
 /** Courier location lists for the pickup-address form (couriers with stores only). */
 @ApiTags('courier')
@@ -131,6 +133,54 @@ export class AdminShippingController {
   }
 }
 
+/** A shop's own courier accounts (own delivery): parcels are booked on the shop's account. */
+@ApiTags('seller')
+@ApiBearerAuth()
+@Roles('SELLER')
+@RequireMultiVendor()
+@Controller('seller/own-couriers')
+export class SellerOwnCourierController {
+  constructor(
+    private readonly accounts: CourierAccountsService,
+    private readonly shipping: ShippingService,
+    private readonly access: SellerAccessService,
+  ) {}
+
+  private async sellerId(user: AuthUserContext) {
+    return (await this.access.requireActiveSeller(user.id)).id;
+  }
+
+  @Get()
+  async list(@CurrentUser() user: AuthUserContext) {
+    return this.accounts.sellerList(await this.sellerId(user));
+  }
+
+  /** Connected couriers the shop can book its own-delivery parcels with. */
+  @Get('options')
+  options(@CurrentUser() user: AuthUserContext) {
+    return this.shipping.ownOptions(user.id);
+  }
+
+  @Put(':provider')
+  @ResponseMessage('Courier account saved')
+  async save(@CurrentUser() user: AuthUserContext, @Param('provider') provider: string, @Body() dto: SellerCourierAccountDto) {
+    return this.accounts.sellerSave(await this.sellerId(user), CourierRegistry.parse(provider), dto);
+  }
+
+  @Post(':provider/test')
+  @HttpCode(200)
+  async test(@CurrentUser() user: AuthUserContext, @Param('provider') provider: string) {
+    return this.accounts.sellerTest(await this.sellerId(user), CourierRegistry.parse(provider));
+  }
+
+  @Post(':provider/webhook-secret')
+  @HttpCode(200)
+  @ResponseMessage('New webhook secret created')
+  async rotate(@CurrentUser() user: AuthUserContext, @Param('provider') provider: string) {
+    return this.accounts.sellerRotateWebhookSecret(await this.sellerId(user), CourierRegistry.parse(provider));
+  }
+}
+
 /** Courier status webhooks: <API_PUBLIC_URL>/api/v1/webhooks/<courier>, shown in Admin → Couriers. */
 @ApiTags('webhooks')
 @Public()
@@ -138,6 +188,22 @@ export class AdminShippingController {
 @Controller('webhooks')
 export class CourierWebhookController {
   constructor(private readonly shipping: ShippingService) {}
+
+  /** A shop's own courier account (own delivery). */
+  @Post(':provider/shops/:sellerId')
+  @ApiExcludeEndpoint()
+  async receiveForShop(
+    @Param('provider') provider: string,
+    @Param('sellerId') sellerId: string,
+    @Req() req: Request,
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.shipping.handleWebhook(CourierRegistry.parse(provider), req.headers, body, sellerId);
+    for (const [k, v] of Object.entries(result.headers)) res.setHeader(k, v);
+    res.status(result.httpStatus);
+    return result.httpStatus === 401 ? { success: false, message: 'Invalid webhook signature' } : { success: true };
+  }
 
   @Post(':provider')
   @ApiExcludeEndpoint()

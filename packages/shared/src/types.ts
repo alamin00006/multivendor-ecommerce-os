@@ -945,6 +945,11 @@ export interface CourierAccountView {
   updatedAt: IsoDate | null;
 }
 
+/** A shop's own courier account: same as the platform's, plus the shop's pickup store id. */
+export interface SellerCourierAccountView extends CourierAccountView {
+  storeExternalId: string | null;
+}
+
 export interface ShipmentView {
   id: string;
   provider: CourierProvider;

@@ -6,6 +6,8 @@ import type {
   CourierOption,
   CourierProvider,
   CourierStoreInput,
+  SellerCourierAccountInput,
+  SellerCourierAccountView,
   ShipmentView,
 } from '@marketbd/shared';
 import { baseApi, unwrap } from '../base-api.js';
@@ -84,6 +86,32 @@ export const shippingApi = baseApi.injectEndpoints({
       transformResponse: unwrap<ShipmentView>,
       invalidatesTags: ['SellerOrders', 'AdminOrders'],
     }),
+
+    // Seller → the shop's own courier accounts (own delivery)
+    ownCourierAccounts: b.query<SellerCourierAccountView[], void>({
+      query: () => '/seller/own-couriers',
+      transformResponse: unwrap<SellerCourierAccountView[]>,
+      providesTags: ['Courier'],
+    }),
+    saveOwnCourierAccount: b.mutation<SellerCourierAccountView, { provider: CourierProvider; body: SellerCourierAccountInput }>({
+      query: ({ provider, body }) => ({ url: `/seller/own-couriers/${slug(provider)}`, method: 'PUT', body }),
+      transformResponse: unwrap<SellerCourierAccountView>,
+      invalidatesTags: ['Courier'],
+    }),
+    testOwnCourierAccount: b.mutation<{ message: string }, CourierProvider>({
+      query: (provider) => ({ url: `/seller/own-couriers/${slug(provider)}/test`, method: 'POST' }),
+      transformResponse: unwrap<{ message: string }>,
+    }),
+    rotateOwnCourierWebhookSecret: b.mutation<SellerCourierAccountView, CourierProvider>({
+      query: (provider) => ({ url: `/seller/own-couriers/${slug(provider)}/webhook-secret`, method: 'POST' }),
+      transformResponse: unwrap<SellerCourierAccountView>,
+      invalidatesTags: ['Courier'],
+    }),
+    ownCourierOptions: b.query<CourierOption[], void>({
+      query: () => '/seller/own-couriers/options',
+      transformResponse: unwrap<CourierOption[]>,
+      providesTags: ['Courier'],
+    }),
   }),
 });
 
@@ -99,4 +127,9 @@ export const {
   useCourierAreasQuery,
   useBookShipmentMutation,
   useSyncShipmentMutation,
+  useOwnCourierAccountsQuery,
+  useSaveOwnCourierAccountMutation,
+  useTestOwnCourierAccountMutation,
+  useRotateOwnCourierWebhookSecretMutation,
+  useOwnCourierOptionsQuery,
 } = shippingApi;
