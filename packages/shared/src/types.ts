@@ -918,6 +918,14 @@ export interface SellerReport {
   byChannel: Array<{ channel: OrderChannel; orders: number; gross: number }>;
 }
 
+/** Marketplace-wide sales report. In `daily`, `net` is the platform commission. */
+export interface AdminReport extends SellerReport {
+  totals: SellerReport['totals'] & { customers: number; newCustomers: number; shipping: number; discount: number };
+  bySeller: Array<{ sellerId: string; shopName: string; orders: number; gross: number; commission: number }>;
+  byCategory: Array<{ categoryId: string; name: string; units: number; gross: number }>;
+  byPayment: Array<{ method: PaymentMethod; orders: number; gross: number }>;
+}
+
 export interface BulkStockResult {
   updated: number;
   errors: Array<{ row: number; sku: string; message: string }>;

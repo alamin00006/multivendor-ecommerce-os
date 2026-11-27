@@ -1,7 +1,7 @@
-import type { ActivityListQuery, ActivityView, CreateStaffInput, StaffView, UpdateStaffInput } from '@marketbd/shared';
+import type { ActivityListQuery, ActivityView, AdminReport, SellerReportQuery, CreateStaffInput, StaffView, UpdateStaffInput } from '@marketbd/shared';
 import { baseApi, type Page, qs, unwrap, unwrapPage } from '../base-api.js';
 
-/** Admin staff accounts and the admin activity log (full-access admins only). */
+/** Admin staff accounts, the admin activity log and the marketplace sales report. */
 export const staffApi = baseApi.injectEndpoints({
   endpoints: (b) => ({
     adminStaff: b.query<StaffView[], void>({
@@ -24,7 +24,12 @@ export const staffApi = baseApi.injectEndpoints({
       transformResponse: unwrapPage<ActivityView>,
       providesTags: ['Activity'],
     }),
+    adminReport: b.query<AdminReport, SellerReportQuery>({
+      query: (params) => `/admin/reports${qs(params)}`,
+      transformResponse: unwrap<AdminReport>,
+      providesTags: ['SellerReports'],
+    }),
   }),
 });
 
-export const { useAdminStaffQuery, useAdminCreateStaffMutation, useAdminUpdateStaffMutation, useAdminActivityQuery } = staffApi;
+export const { useAdminStaffQuery, useAdminCreateStaffMutation, useAdminUpdateStaffMutation, useAdminActivityQuery, useAdminReportQuery } = staffApi;

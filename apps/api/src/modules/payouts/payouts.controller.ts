@@ -83,3 +83,16 @@ export class AdminPayoutsController {
     return this.payouts.process(user.id, id, dto);
   }
 }
+
+@ApiTags('admin')
+@ApiBearerAuth()
+@Roles('ADMIN')
+@Controller('admin')
+export class AdminReportsController {
+  constructor(private readonly reports: SellerReportsService) {}
+
+  @Get('reports')
+  report(@Query() query: SellerReportQueryDto) {
+    return this.reports.adminReport(query);
+  }
+}

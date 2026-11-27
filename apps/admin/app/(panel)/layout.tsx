@@ -5,6 +5,7 @@ import { adminAreaFor, hasAdminArea } from '@marketbd/shared';
 import { usePathname } from 'next/navigation';
 import {
   BadgePercent,
+  BarChart3,
   History,
   Lock,
   Bike,
@@ -44,6 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { href: '/pos', label: 'POS', icon: ShoppingBasket },
     { href: '/orders', label: 'Orders', icon: ShoppingBag },
+    { href: '/reports', label: 'Reports', icon: BarChart3 },
     { href: '/returns', label: 'Returns', icon: RotateCcw },
     { href: '/courier', label: 'Couriers', icon: Truck },
     { href: '/messages', label: 'Messages', icon: MessagesSquare, badge: chatUnread?.count },
