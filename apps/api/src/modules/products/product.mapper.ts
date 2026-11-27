@@ -16,6 +16,7 @@ export const sellerSummarySelect = {
   logoUrl: true,
   ratingAvg: true,
   isHouseStore: true,
+  verifiedAt: true,
   status: true,
 } satisfies Prisma.SellerProfileSelect;
 
@@ -38,6 +39,7 @@ export const toSellerSummary = (s: SellerRow): SellerSummary => ({
   logoUrl: s.logoUrl,
   ratingAvg: num(s.ratingAvg),
   isHouseStore: s.isHouseStore,
+  isVerified: s.isHouseStore || s.verifiedAt !== null,
 });
 
 /** Effective unit price for a variant: flash price when an active flash sale has stock left. */

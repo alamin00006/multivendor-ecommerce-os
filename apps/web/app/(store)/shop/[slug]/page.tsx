@@ -55,7 +55,7 @@ export default async function ShopPage({ params, searchParams }: { params: Promi
             <div className="text-white">
               <h1 className="flex items-center gap-1.5 font-display text-2xl font-bold drop-shadow md:text-3xl">
                 {shop.shopName}
-                {shop.isHouseStore && <BadgeCheck className="size-6" aria-label="Official store" />}
+                {shop.isVerified && <BadgeCheck className="size-6" aria-label={shop.isHouseStore ? 'Official store' : 'Verified seller'} />}
               </h1>
               <div className="mt-1 flex items-center gap-2">
                 <Stars value={shop.ratingAvg} />

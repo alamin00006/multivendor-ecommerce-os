@@ -1,4 +1,4 @@
-import { type CallHandler, type ExecutionContext, Injectable, type NestInterceptor } from '@nestjs/common';
+import { type CallHandler, type ExecutionContext, Injectable, type NestInterceptor, StreamableFile } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { ApiResponse } from '@marketbd/shared';
 import { map, type Observable } from 'rxjs';
@@ -21,6 +21,8 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<un
 
     return next.handle().pipe(
       map((body) => {
+        // Files are sent as they are.
+        if (body instanceof StreamableFile) return body as unknown as ApiResponse<unknown>;
         if (body instanceof PaginatedResult) {
           return { success: true, data: body.items, message, meta: body.meta };
         }

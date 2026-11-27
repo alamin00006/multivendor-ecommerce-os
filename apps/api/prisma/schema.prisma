@@ -398,6 +398,8 @@ model SellerProfile {
   commissionRate Decimal        @default(10) @db.Decimal(5, 2)
   ratingAvg      Decimal        @default(0) @db.Decimal(2, 1)
   approvedAt     DateTime?
+  /// Set by an admin once the shop's identity documents were checked ("Verified seller" badge).
+  verifiedAt     DateTime?
   /// Where payouts go: { method, accountName, accountNumber, bankName?, branch? }
   payoutAccount  Json?
   /// Own-courier settings: { courier, courierName?, insideDhakaFee, outsideDhakaFee, insideDhakaEta, outsideDhakaEta }
@@ -418,8 +420,46 @@ model SellerProfile {
   coupons        Coupon[]
   payouts        Payout[]
   courierStores  CourierStore[]
+  documents      SellerDocument[]
 
   @@index([status])
+}
+
+enum SellerDocumentType {
+  NID_FRONT
+  NID_BACK
+  TRADE_LICENSE
+  TIN
+  BANK_PROOF
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Identity / business papers a shop uploads for verification. Files live in the private bucket.
+model SellerDocument {
+  id           String             @id @default(cuid())
+  sellerId     String
+  seller       SellerProfile      @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  type         SellerDocumentType
+  /// Object key in the private bucket.
+  fileKey      String
+  mimeType     String
+  fileName     String?
+  status       DocumentStatus     @default(PENDING)
+  /// Admin's reason when rejected (shown to the seller).
+  note         String?
+  reviewedAt   DateTime?
+  reviewedById String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@unique([sellerId, type])
+  @@index([status, createdAt])
 }
 
 /// A seller's pickup point registered with a courier under the platform's courier account.

@@ -275,7 +275,7 @@ function ProductInfo({ product, purchase }: { product: ProductDetail; purchase: 
           </Link>
         )}
         <h1 className="text-lg font-semibold leading-snug text-ink-900 md:text-xl">
-            {showSellerInfo && product.seller && (
+            {showSellerInfo && product.seller?.isVerified && (
               <span className="mr-1.5 inline-flex -translate-y-0.5 items-center gap-0.5 rounded bg-primary-50 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase text-primary-700">
                 <BadgeCheck className="size-3" /> {product.seller.isHouseStore ? 'Official' : 'Verified'}
               </span>
@@ -558,7 +558,7 @@ export function ProductView({ product }: { product: ProductDetail }) {
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1 font-semibold">
                   {product.seller.shopName}
-                  {product.seller.isHouseStore && <BadgeCheck className="size-4 text-primary-600" />}
+                  {product.seller.isVerified && <BadgeCheck className="size-4 text-primary-600" aria-label={product.seller.isHouseStore ? 'Official store' : 'Verified seller'} />}
                 </p>
                 {product.seller.ratingAvg > 0 && (
                   <p className="flex items-center gap-1 text-xs text-ink-500">

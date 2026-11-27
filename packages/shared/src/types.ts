@@ -4,6 +4,7 @@
  * Dates are ISO strings on the wire.
  */
 import type { OwnCourier } from './schemas/own-delivery.js';
+import type { SellerDocumentType } from './schemas/seller-business.js';
 import type {
   AddressLabel,
   BannerPlacement,
@@ -165,6 +166,8 @@ export interface SellerSummary {
   logoUrl: string | null;
   ratingAvg: number;
   isHouseStore: boolean;
+  /** An admin checked the shop's identity documents. */
+  isVerified: boolean;
 }
 
 export interface FlashPrice {
@@ -650,7 +653,36 @@ export interface SellerProfileView extends ShopView {
   pickupAddress: string | null;
   commissionRate: number;
   approvedAt: IsoDate | null;
+  verifiedAt: IsoDate | null;
   owner: { id: string; name: string; email: string | null; phone: string | null };
+}
+
+export interface SellerDocumentView {
+  id: string;
+  type: SellerDocumentType;
+  mimeType: string;
+  fileName: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  note: string | null;
+  reviewedAt: IsoDate | null;
+  createdAt: IsoDate;
+}
+
+export interface SellerDocumentsView {
+  verifiedAt: IsoDate | null;
+  documents: SellerDocumentView[];
+  /** Required documents not yet uploaded or rejected. */
+  missing: SellerDocumentType[];
+}
+
+/** Admin queue row: a shop with documents waiting for review. */
+export interface DocumentQueueRow {
+  sellerId: string;
+  shopName: string;
+  slug: string;
+  verifiedAt: IsoDate | null;
+  pending: number;
+  lastUploadAt: IsoDate;
 }
 
 export interface SellerDashboard {

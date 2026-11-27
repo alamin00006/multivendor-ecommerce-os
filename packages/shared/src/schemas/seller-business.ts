@@ -96,3 +96,37 @@ export const BulkStockUpdateSchema = z.object({
     .max(1000, 'Up to 1000 rows per upload'),
 });
 export type BulkStockUpdateInput = z.input<typeof BulkStockUpdateSchema>;
+
+// ───────── Seller documents (verification) ─────────
+
+export const SELLER_DOCUMENT_TYPES = ['NID_FRONT', 'NID_BACK', 'TRADE_LICENSE', 'TIN', 'BANK_PROOF', 'OTHER'] as const;
+export type SellerDocumentType = (typeof SELLER_DOCUMENT_TYPES)[number];
+export const SellerDocumentTypeSchema = z.enum(SELLER_DOCUMENT_TYPES);
+
+export const SELLER_DOCUMENT_INFO: Record<SellerDocumentType, { label: string; hint: string; required: boolean }> = {
+  NID_FRONT: { label: 'National ID — front', hint: 'Owner’s NID card, front side. All four corners visible.', required: true },
+  NID_BACK: { label: 'National ID — back', hint: 'Back side of the same NID card.', required: true },
+  TRADE_LICENSE: { label: 'Trade license', hint: 'Valid trade license of the business (if you have one).', required: false },
+  TIN: { label: 'TIN certificate', hint: 'e-TIN certificate (if you have one).', required: false },
+  BANK_PROOF: { label: 'Bank / wallet proof', hint: 'Cheque leaf, bank statement or bKash account screenshot in the owner’s name.', required: false },
+  OTHER: { label: 'Other document', hint: 'Anything else that helps us verify your shop.', required: false },
+};
+
+/** Images or a PDF, up to 5 MB. */
+export const SELLER_DOCUMENT_UPLOAD = {
+  maxBytes: 5 * 1024 * 1024,
+  mimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] as const,
+} as const;
+
+export const SellerDocumentUploadQuerySchema = z.object({ type: SellerDocumentTypeSchema });
+
+export const ReviewSellerDocumentSchema = z
+  .object({
+    status: z.enum(['APPROVED', 'REJECTED']),
+    note: z.string().trim().max(300).optional(),
+  })
+  .refine((v) => v.status === 'APPROVED' || (v.note && v.note.length >= 3), { message: 'Tell the seller what is wrong', path: ['note'] });
+export type ReviewSellerDocumentInput = z.infer<typeof ReviewSellerDocumentSchema>;
+
+export const SellerVerificationSchema = z.object({ verified: z.boolean() });
+export type SellerVerificationInput = z.infer<typeof SellerVerificationSchema>;

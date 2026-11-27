@@ -1,7 +1,7 @@
 'use client';
 
 import { selectUser, useChatLive, useChatUnreadQuery } from '@marketbd/api-client';
-import { BarChart3, LayoutDashboard, ShoppingBasket, MessageCircleQuestion, MessagesSquare, Package, RotateCcw, ShoppingBag, Star, Store, Ticket, Truck, Wallet } from 'lucide-react';
+import { BarChart3, FileCheck, LayoutDashboard, ShoppingBasket, MessageCircleQuestion, MessagesSquare, Package, RotateCcw, ShoppingBag, Star, Store, Ticket, Truck, Wallet } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { type NavItem, PanelLayout } from '@marketbd/ui';
 
@@ -23,6 +23,7 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
     { href: '/questions', label: 'Questions', icon: MessageCircleQuestion },
     { href: '/vouchers', label: 'Vouchers', icon: Ticket },
     { href: '/shop', label: 'Shop settings', icon: Store },
+    { href: '/documents', label: 'Verification', icon: FileCheck },
   ];
   return (
     <PanelLayout title="Seller Center" nav={nav} roles={['SELLER']}>

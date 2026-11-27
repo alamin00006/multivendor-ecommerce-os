@@ -14,7 +14,7 @@ export function ProductCard({ product, priority = false }: { product: ProductCar
   const { t, money, pick } = useI18n();
   const router = useRouter();
   const { add, isLoading } = useAddToCart();
-  const verified = product.seller !== null;
+  const verified = product.seller?.isVerified ?? false;
 
   const onAdd = async () => {
     const v = product.defaultVariant;

@@ -14,6 +14,7 @@ import { apiConfig, persistTokens } from './config.js';
 export const TAG_TYPES = [
   'Me',
   'Staff',
+  'SellerDocuments',
   'Activity',
   'Chat',
   'PosProducts',

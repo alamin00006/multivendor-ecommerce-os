@@ -7,7 +7,7 @@ import { BadgeCheck, Clock, Store, TrendingUp, Truck } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import { toast } from 'sonner';
-import { RequireAuth, Badge, Button, ButtonLink, partnerUrl, Skeleton } from '@marketbd/ui';
+import { RequireAuth, Badge, Button, ButtonLink, partnerUrl, SellerDocumentsManager, Skeleton } from '@marketbd/ui';
 
 function Application() {
   const user = useSelector(selectUser);
@@ -17,21 +17,41 @@ function Application() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<SellerRegisterInput>({ resolver: zodResolver(SellerRegisterSchema), defaultValues: { phone: user?.phone ?? '' } });
+  } = useForm<SellerRegisterInput>({
+    resolver: zodResolver(SellerRegisterSchema),
+    defaultValues: { phone: user?.phone ?? '' },
+  });
 
   if (isLoading) return <Skeleton className="h-64" />;
   if (shop && !isError) {
     return (
-      <div className="card space-y-3 p-6 text-center">
-        <Store className="mx-auto size-12 text-primary-700" />
-        <h2 className="text-lg font-semibold">{shop.shopName}</h2>
-        <Badge tone={shop.status === 'APPROVED' ? 'success' : shop.status === 'PENDING' ? 'warning' : 'danger'}>{shop.status}</Badge>
-        {shop.status === 'PENDING' && <p className="text-sm text-ink-600">Your application is under review. We will notify you once it is approved.</p>}
-        {shop.status === 'APPROVED' && (
-          <>
-            <p className="text-sm text-ink-600">Your shop is approved. Sign out and sign in again if the Seller Center does not open.</p>
-            <ButtonLink href={partnerUrl()}>Open Seller Center</ButtonLink>
-          </>
+      <div className="space-y-4">
+        <div className="card space-y-3 p-6 text-center">
+          <Store className="mx-auto size-12 text-primary-700" />
+          <h2 className="text-lg font-semibold">{shop.shopName}</h2>
+          <Badge tone={shop.status === 'APPROVED' ? 'success' : shop.status === 'PENDING' ? 'warning' : 'danger'}>
+            {shop.status}
+          </Badge>
+          {shop.status === 'PENDING' && (
+            <p className="text-sm text-ink-600">
+              Your application is under review. We will notify you once it is approved.
+            </p>
+          )}
+          {shop.status === 'APPROVED' && (
+            <>
+              <p className="text-sm text-ink-600">
+                Your shop is approved. Sign out and sign in again if the Seller Center does not open.
+              </p>
+              <ButtonLink href={partnerUrl()}>Open Seller Center</ButtonLink>
+            </>
+          )}
+        </div>
+        {shop.status === 'PENDING' && (
+          <section className="card p-6">
+            <h2 className="mb-1 text-lg font-semibold">Verification documents</h2>
+            <p className="mb-4 text-sm text-ink-600">Uploading your National ID now speeds up the review.</p>
+            <SellerDocumentsManager />
+          </section>
         )}
       </div>
     );
@@ -51,22 +71,30 @@ function Application() {
     >
       <h2 className="text-lg font-semibold sm:col-span-2">Open your shop</h2>
       <div className="sm:col-span-2">
-        <label className="label" htmlFor="shopName">Shop name</label>
+        <label className="label" htmlFor="shopName">
+          Shop name
+        </label>
         <input id="shopName" className="input" {...register('shopName')} />
         {errors.shopName && <p className="field-error">{errors.shopName.message}</p>}
       </div>
       <div>
-        <label className="label" htmlFor="phone">Business phone</label>
+        <label className="label" htmlFor="phone">
+          Business phone
+        </label>
         <input id="phone" className="input" inputMode="tel" {...register('phone')} />
         {errors.phone && <p className="field-error">{errors.phone.message}</p>}
       </div>
       <div>
-        <label className="label" htmlFor="pickupAddress">Pickup address</label>
+        <label className="label" htmlFor="pickupAddress">
+          Pickup address
+        </label>
         <input id="pickupAddress" className="input" {...register('pickupAddress')} />
         {errors.pickupAddress && <p className="field-error">{errors.pickupAddress.message}</p>}
       </div>
       <div className="sm:col-span-2">
-        <label className="label" htmlFor="description">What do you sell?</label>
+        <label className="label" htmlFor="description">
+          What do you sell?
+        </label>
         <textarea id="description" className="input h-24 py-2" {...register('description')} />
       </div>
       <Button type="submit" className="sm:col-span-2" loading={state.isLoading}>

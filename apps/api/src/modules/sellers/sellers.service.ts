@@ -32,6 +32,7 @@ const toShopView = (s: ProfileRow): ShopView => ({
   logoUrl: s.logoUrl,
   ratingAvg: num(s.ratingAvg),
   isHouseStore: s.isHouseStore,
+  isVerified: s.isHouseStore || s.verifiedAt !== null,
   description: s.description,
   bannerUrl: s.bannerUrl,
   productCount: s._count.products,
@@ -46,6 +47,7 @@ const toProfileView = (s: ProfileRow): SellerProfileView => ({
   pickupAddress: s.pickupAddress,
   commissionRate: num(s.commissionRate),
   approvedAt: s.approvedAt?.toISOString() ?? null,
+  verifiedAt: s.verifiedAt?.toISOString() ?? null,
   owner: s.user,
 });
 

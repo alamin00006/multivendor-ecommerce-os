@@ -37,6 +37,8 @@ const EnvSchema = z.object({
   S3_BUCKET: z.string().min(1),
   S3_FORCE_PATH_STYLE: bool,
   S3_PUBLIC_URL: z.string().url(),
+  /** Bucket for private files (seller documents); never public. Default: `<S3_BUCKET>-private`. */
+  S3_PRIVATE_BUCKET: z.string().default(''),
   IMAGE_ALLOWED_HOSTS: csv,
 
   WEB_URL: z.string().url().default('http://localhost:3000'),

@@ -552,7 +552,7 @@ export default function ProductScreen() {
               ) : null}
             </View>
             <Text className="mt-1.5 text-lg leading-6 text-ink-900">
-              {seller ? <Text className="text-sm font-bold text-primary-700">{seller.isHouseStore ? '✓ Official  ' : '✓ Verified  '}</Text> : null}
+              {seller?.isVerified ? <Text className="text-sm font-bold text-primary-700">{seller.isHouseStore ? '✓ Official  ' : '✓ Verified  '}</Text> : null}
               {pick(product.title, product.titleBn)}
             </Text>
             <View className="mt-2 flex-row items-center justify-between">
@@ -696,9 +696,11 @@ export default function ProductScreen() {
                 <Image source={img(seller.logoUrl, 64)} style={{ width: 64, height: 64, borderRadius: 10 }} />
                 <View className="flex-1 gap-1">
                   <Text className="text-lg font-semibold text-ink-900">{seller.shopName}</Text>
-                  <View className="self-start rounded bg-accent-500 px-2 py-0.5">
-                    <Text className="text-[11px] font-bold uppercase text-white">{seller.isHouseStore ? 'Official Store' : 'Verified Store'}</Text>
-                  </View>
+                  {seller.isVerified ? (
+                    <View className="self-start rounded bg-accent-500 px-2 py-0.5">
+                      <Text className="text-[11px] font-bold uppercase text-white">{seller.isHouseStore ? 'Official Store' : 'Verified Store'}</Text>
+                    </View>
+                  ) : null}
                 </View>
               </Pressable>
               {seller.ratingAvg > 0 ? (

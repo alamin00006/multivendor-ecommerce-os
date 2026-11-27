@@ -23,3 +23,4 @@ export * from './brand-theme';
 export * from './pos';
 export * from './manage/courier';
 export * from './manage/sales-report';
+export * from './manage/seller-documents';

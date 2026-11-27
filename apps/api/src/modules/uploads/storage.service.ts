@@ -1,5 +1,7 @@
 import {
   CreateBucketCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
   HeadBucketCommand,
   PutBucketPolicyCommand,
   PutObjectCommand,
@@ -61,5 +63,42 @@ export class StorageService implements OnModuleInit {
       }),
     );
     return `${env.S3_PUBLIC_URL.replace(/\/$/, '')}/${key}`;
+  }
+
+  // ───── Private files (no public URL; served through the API after an access check) ─────
+
+  private readonly privateBucket = env.S3_PRIVATE_BUCKET || `${env.S3_BUCKET}-private`;
+  private privateReady: Promise<void> | null = null;
+
+  /** Creates the private bucket (no bucket policy, so nothing in it is public). */
+  private ensurePrivate(): Promise<void> {
+    this.privateReady ??= (async () => {
+      try {
+        await this.s3.send(new HeadBucketCommand({ Bucket: this.privateBucket }));
+      } catch {
+        await this.s3.send(new CreateBucketCommand({ Bucket: this.privateBucket }));
+        this.logger.log(`Created private bucket "${this.privateBucket}"`);
+      }
+    })().catch((error: unknown) => {
+      this.privateReady = null;
+      throw error;
+    });
+    return this.privateReady;
+  }
+
+  async putPrivate(key: string, body: Buffer, contentType: string): Promise<void> {
+    await this.ensurePrivate();
+    await this.s3.send(new PutObjectCommand({ Bucket: this.privateBucket, Key: key, Body: body, ContentType: contentType }));
+  }
+
+  async getPrivate(key: string): Promise<Buffer> {
+    await this.ensurePrivate();
+    const res = await this.s3.send(new GetObjectCommand({ Bucket: this.privateBucket, Key: key }));
+    return Buffer.from(await res.Body!.transformToByteArray());
+  }
+
+  async deletePrivate(key: string): Promise<void> {
+    await this.ensurePrivate();
+    await this.s3.send(new DeleteObjectCommand({ Bucket: this.privateBucket, Key: key }));
   }
 }

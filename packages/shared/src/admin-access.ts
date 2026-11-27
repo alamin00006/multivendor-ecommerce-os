@@ -45,6 +45,7 @@ const SEGMENT_AREA: Record<string, AdminRouteArea> = {
   coupons: 'marketing',
   sellers: 'sellers',
   'own-delivery': 'sellers',
+  'seller-documents': 'sellers',
   'shop-delivery': 'sellers',
   payouts: 'finance',
   reports: 'finance',

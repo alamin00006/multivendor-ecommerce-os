@@ -1,11 +1,12 @@
 'use client';
 
-import { errorMessage, useAdminSellersQuery, useAdminUpdateSellerMutation } from '@marketbd/api-client';
+import { errorMessage, useAdminDocumentQueueQuery, useAdminSellersQuery, useAdminUpdateSellerMutation } from '@marketbd/api-client';
 import { SELLER_STATUSES, type SellerStatus } from '@marketbd/shared';
-import { Store } from 'lucide-react';
+import { BadgeCheck, FileText, Store } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { fmtDate, PageHeader, Pager, Table, Badge, Button, EmptyState, Skeleton } from '@marketbd/ui';
+import { SellerDocumentsReview } from '../../../components/seller-documents-review';
 
 const TONE: Record<SellerStatus, 'success' | 'warning' | 'danger'> = { APPROVED: 'success', PENDING: 'warning', SUSPENDED: 'danger' };
 
@@ -15,6 +16,9 @@ export default function AdminSellersPage() {
   const [page, setPage] = useState(1);
   const { data, isLoading } = useAdminSellersQuery({ status: status || undefined, q: q || undefined, page, limit: 20 });
   const [update, state] = useAdminUpdateSellerMutation();
+  const { data: queue } = useAdminDocumentQueueQuery();
+  const [reviewing, setReviewing] = useState<{ id: string; shopName: string } | null>(null);
+  const pendingDocs = new Map((queue ?? []).map((q) => [q.sellerId, q.pending]));
 
   const act = async (id: string, body: { status?: SellerStatus; commissionRate?: number }) => {
     try {
@@ -28,6 +32,17 @@ export default function AdminSellersPage() {
   return (
     <div>
       <PageHeader title="Sellers" description="Approve new shops, suspend sellers and set each shop’s default commission. A rate set on a category (Categories page) takes priority." />
+      {queue && queue.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <FileText className="size-4" />
+          <span className="flex-1">Documents waiting for review:</span>
+          {queue.map((q) => (
+            <Button key={q.sellerId} size="sm" variant="ghost" onClick={() => setReviewing({ id: q.sellerId, shopName: q.shopName })}>
+              {q.shopName} ({q.pending})
+            </Button>
+          ))}
+        </div>
+      )}
       <div className="card">
         <div className="flex flex-wrap gap-2 border-b border-ink-100 p-3">
           <input className="input max-w-xs" placeholder="Shop or email" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
@@ -45,7 +60,14 @@ export default function AdminSellersPage() {
             {data?.items.map((s) => (
               <tr key={s.id}>
                 <td className="px-4 py-3">
-                  <p className="font-medium">{s.shopName} {s.isHouseStore && <Badge tone="primary">House</Badge>}</p>
+                  <p className="font-medium">
+                    {s.shopName} {s.isHouseStore && <Badge tone="primary">House</Badge>}{' '}
+                    {s.verifiedAt && !s.isHouseStore && (
+                      <span title="Verified seller" className="inline-flex align-middle text-green-700">
+                        <BadgeCheck className="size-4" />
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-ink-500">{s.phone}</p>
                 </td>
                 <td className="px-4 py-3 text-xs">{s.owner.name}<br />{s.owner.email}</td>
@@ -66,6 +88,9 @@ export default function AdminSellersPage() {
                 <td className="px-4 py-3">
                   {!s.isHouseStore && (
                     <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => setReviewing({ id: s.id, shopName: s.shopName })}>
+                        Documents{pendingDocs.get(s.id) ? <Badge tone="warning">{pendingDocs.get(s.id)}</Badge> : null}
+                      </Button>
                       {s.status !== 'APPROVED' && <Button size="sm" loading={state.isLoading} onClick={() => void act(s.id, { status: 'APPROVED' })}>Approve</Button>}
                       {s.status === 'APPROVED' && <Button size="sm" variant="danger" onClick={() => confirm(`Suspend ${s.shopName}?`) && void act(s.id, { status: 'SUSPENDED' })}>Suspend</Button>}
                     </div>
@@ -77,6 +102,7 @@ export default function AdminSellersPage() {
         )}
         {data && <Pager page={page} totalPages={data.meta.totalPages} onPage={setPage} />}
       </div>
+      {reviewing && <SellerDocumentsReview key={reviewing.id} sellerId={reviewing.id} shopName={reviewing.shopName} onClose={() => setReviewing(null)} />}
     </div>
   );
 }

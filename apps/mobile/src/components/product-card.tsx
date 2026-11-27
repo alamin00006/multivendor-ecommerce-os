@@ -80,7 +80,7 @@ export function ProductCard({ product, fill = true }: { product: ProductCardData
         </View>
         <View className="gap-1 px-2.5 pt-2">
           <Text numberOfLines={2} className="min-h-[36px] text-[13px] leading-[18px] text-ink-800">
-            {product.seller ? (
+            {product.seller?.isVerified ? (
               <Text className="text-[11px] font-bold text-primary-700">{product.seller.isHouseStore ? '✓ Official  ' : '✓ Verified  '}</Text>
             ) : null}
             {pick(product.title, product.titleBn)}
