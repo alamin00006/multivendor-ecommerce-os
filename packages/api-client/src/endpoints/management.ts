@@ -141,7 +141,7 @@ export const managementApi = baseApi.injectEndpoints({
     adminUpdateUser: b.mutation<AdminUserView, { id: string } & AdminUpdateUserInput>({
       query: ({ id, ...body }) => ({ url: `/admin/users/${id}`, method: 'PATCH', body }),
       transformResponse: unwrap<AdminUserView>,
-      invalidatesTags: ['AdminUsers'],
+      invalidatesTags: ['AdminUsers', 'Staff'],
     }),
     adminSellers: b.query<Page<SellerProfileView>, SellerListQuery>({
       query: (params) => `/admin/sellers${qs(params)}`,

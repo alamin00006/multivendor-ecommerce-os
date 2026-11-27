@@ -1,8 +1,12 @@
 'use client';
 
-import { useChatLive, useChatUnreadQuery, useIsAuthenticated, useMarketplaceMode } from '@marketbd/api-client';
+import { useChatLive, useChatUnreadQuery, useIsAuthenticated, useMarketplaceMode, useMeQuery } from '@marketbd/api-client';
+import { adminAreaFor, hasAdminArea } from '@marketbd/shared';
+import { usePathname } from 'next/navigation';
 import {
   BadgePercent,
+  History,
+  Lock,
   Bike,
   Image as ImageIcon,
   LayoutDashboard,
@@ -17,6 +21,7 @@ import {
   Settings,
   ShoppingBag,
   ShoppingBasket,
+  ShieldCheck,
   Store,
   Tags,
   Truck,
@@ -24,14 +29,18 @@ import {
   Wallet,
   Zap,
 } from 'lucide-react';
-import { type NavItem, PanelLayout } from '@marketbd/ui';
+import { EmptyState, type NavItem, PanelLayout } from '@marketbd/ui';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { multiVendor } = useMarketplaceMode();
   const authed = useIsAuthenticated();
   const chatLive = useChatLive();
-  const { data: chatUnread } = useChatUnreadQuery('admin', { skip: !authed, pollingInterval: chatLive ? 0 : 30_000 });
-  const nav: NavItem[] = [
+  const pathname = usePathname();
+  const { data: me } = useMeQuery(undefined, { skip: !authed });
+  const permissions = me?.adminPermissions ?? [];
+  const can = (href: string) => hasAdminArea(permissions, adminAreaFor(href));
+  const { data: chatUnread } = useChatUnreadQuery('admin', { skip: !authed || !can('/messages'), pollingInterval: chatLive ? 0 : 30_000 });
+  const all: NavItem[] = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
     { href: '/pos', label: 'POS', icon: ShoppingBasket },
     { href: '/orders', label: 'Orders', icon: ShoppingBag },
@@ -51,10 +60,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/reviews', label: 'Reviews', icon: MessageSquare },
     { href: '/questions', label: 'Questions', icon: MessageCircleQuestion },
     { href: '/settings', label: 'Settings', icon: Settings },
+    { href: '/staff', label: 'Staff', icon: ShieldCheck },
+    { href: '/activity', label: 'Activity log', icon: History },
   ];
+  const nav = me ? all.filter((item) => can(item.href)) : all.filter((item) => item.href === '/');
+  const allowed = !me || can(pathname);
   return (
     <PanelLayout title="Admin" nav={nav} roles={['ADMIN']}>
-      {children}
+      {allowed ? (
+        children
+      ) : (
+        <div className="card">
+          <EmptyState icon={<Lock />} title="No access" text="Your staff account does not include this section. Ask a full-access admin to add it." />
+        </div>
+      )}
     </PanelLayout>
   );
 }

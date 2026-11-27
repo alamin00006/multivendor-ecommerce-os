@@ -249,6 +249,8 @@ model User {
   birthday        DateTime? @db.Date
   gender          Gender?
   isActive        Boolean   @default(true)
+  /// Admin staff areas (see ADMIN_AREAS in @marketbd/shared); "all" = owner. Empty for other roles.
+  adminPermissions String[] @default([])
   emailVerifiedAt DateTime?
   phoneVerifiedAt DateTime?
   createdAt       DateTime  @default(now())
@@ -269,8 +271,28 @@ model User {
   pushTokens        PushToken[]
   couponRedemptions CouponRedemption[]
   couponCollections CouponCollection[]
+  adminActivities   AdminActivity[]
 
   @@index([role, createdAt])
+}
+
+/// Every change an admin makes through the API (who, what, when). Read-only in the panel.
+model AdminActivity {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  method    String
+  path      String
+  area      String
+  summary   String?
+  /// Request body with secrets stripped.
+  details   Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([area, createdAt])
 }
 
 model RefreshToken {

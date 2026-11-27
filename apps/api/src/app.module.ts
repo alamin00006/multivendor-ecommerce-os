@@ -1,6 +1,7 @@
 import { Controller, Get, Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { AdminAccessGuard, AdminActivityInterceptor } from './common/admin-access.js';
 import { HttpThrottlerGuard } from './common/http-throttler.guard.js';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { AllExceptionsFilter } from './common/all-exceptions.filter.js';
@@ -83,10 +84,12 @@ class HealthController {
   providers: [
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: AdminActivityInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_GUARD, useClass: HttpThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: AdminAccessGuard },
     { provide: APP_GUARD, useClass: MultiVendorGuard },
   ],
 })

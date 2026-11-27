@@ -1,4 +1,6 @@
 import { HexColorSchema } from '../brand-colors.js';
+import { ADMIN_AREAS } from '../admin-access.js';
+import { EmailSchema, NameSchema, PasswordSchema } from './auth.js';
 import { z } from 'zod';
 import { RoleSchema, SellerStatusSchema } from '../enums.js';
 import { BdPhoneSchema, PaginationQuerySchema, SlugSchema, UrlSchema } from './common.js';
@@ -129,3 +131,36 @@ export const PushTokenSchema = z.object({
 });
 export type PushTokenInput = z.infer<typeof PushTokenSchema>;
 export const RemovePushTokenSchema = PushTokenSchema.pick({ token: true });
+
+// ───────── Admin staff & activity log ─────────
+
+const AdminPermissionSchema = z.enum(['all', ...ADMIN_AREAS]);
+const AdminPermissionsSchema = z
+  .array(AdminPermissionSchema)
+  .max(ADMIN_AREAS.length + 1)
+  .transform((list) => (list.includes('all') ? ['all' as const] : [...new Set(list)]));
+
+export const CreateStaffSchema = z.object({
+  name: NameSchema,
+  email: EmailSchema,
+  phone: BdPhoneSchema.optional(),
+  /** Temporary password; the staff member signs in with it and can change it from their profile. */
+  password: PasswordSchema,
+  permissions: AdminPermissionsSchema,
+});
+export type CreateStaffInput = z.input<typeof CreateStaffSchema>;
+export type CreateStaffPayload = z.infer<typeof CreateStaffSchema>;
+
+export const UpdateStaffSchema = z.object({
+  permissions: AdminPermissionsSchema.optional(),
+  isActive: z.boolean().optional(),
+});
+export type UpdateStaffInput = z.input<typeof UpdateStaffSchema>;
+export type UpdateStaffPayload = z.infer<typeof UpdateStaffSchema>;
+
+export const ActivityListQuerySchema = PaginationQuerySchema.extend({
+  actorId: z.string().min(1).optional(),
+  area: z.enum([...ADMIN_AREAS, 'owner', 'any']).optional(),
+  q: z.string().trim().max(80).optional(),
+});
+export type ActivityListQuery = z.input<typeof ActivityListQuerySchema>;

@@ -1,9 +1,10 @@
 import type { z } from 'zod';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   type AdminDashboard,
   type AdminUpdateUserInput,
   type AdminUserView,
+  FULL_ADMIN_ACCESS,
   type OrderStatus,
   UserListQuerySchema,
 } from '@marketbd/shared';
@@ -121,9 +122,24 @@ export class AdminService {
     if (id === actorId && (input.isActive === false || (input.role && input.role !== 'ADMIN'))) {
       throw new BadRequestException('You cannot disable or demote your own account');
     }
+    const target = await this.prisma.user.findUnique({ where: { id }, select: { role: true, adminPermissions: true } });
+    if (!target) throw new NotFoundException('User not found');
+    // Admin accounts are managed by full-access admins only (Staff page).
+    const touchesAdmin = target.role === 'ADMIN' || input.role === 'ADMIN';
+    if (touchesAdmin) {
+      const actor = await this.prisma.user.findUnique({ where: { id: actorId }, select: { adminPermissions: true } });
+      if (!actor?.adminPermissions.includes(FULL_ADMIN_ACCESS)) {
+        throw new ForbiddenException('Only a full-access admin can change admin accounts');
+      }
+      if (target.adminPermissions.includes(FULL_ADMIN_ACCESS) && (input.isActive === false || (input.role && input.role !== 'ADMIN'))) {
+        await this.assertAnotherOwner(id);
+      }
+    }
+    const roleChanged = input.role && input.role !== target.role;
     const user = await this.prisma.user.update({
       where: { id },
-      data: input,
+      // A new admin starts with the dashboard only; areas are given on the Staff page.
+      data: { ...input, ...(roleChanged ? { adminPermissions: [] } : {}) },
       include: { _count: { select: { orders: true } } },
     });
     if (input.isActive === false || input.role) await this.tokens.revokeAllForUser(id);
@@ -137,5 +153,13 @@ export class AdminService {
       ordersCount: user._count.orders,
       createdAt: user.createdAt.toISOString(),
     };
+  }
+
+  /** Refuses when `id` is the last active full-access admin. */
+  async assertAnotherOwner(id: string): Promise<void> {
+    const others = await this.prisma.user.count({
+      where: { role: 'ADMIN', isActive: true, adminPermissions: { has: FULL_ADMIN_ACCESS }, id: { not: id } },
+    });
+    if (!others) throw new BadRequestException('Keep at least one active full-access admin');
   }
 }

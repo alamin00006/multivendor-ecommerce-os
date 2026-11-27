@@ -3,6 +3,7 @@ export * from './enums.js';
 export * from './money.js';
 export * from './brand-colors.js';
 export * from './help.js';
+export * from './admin-access.js';
 export * from './geo/index.js';
 export * from './schemas/index.js';
 export type * from './types.js';

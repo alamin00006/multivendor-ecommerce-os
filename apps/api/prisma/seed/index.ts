@@ -68,11 +68,12 @@ async function seedAdminAndHouseStore() {
   const password = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@12345';
   const admin = await prisma.user.upsert({
     where: { email },
-    update: {},
+    update: { adminPermissions: ['all'] },
     create: {
       email,
       name: 'MarketBD Admin',
       role: 'ADMIN',
+      adminPermissions: ['all'],
       passwordHash: await argon2.hash(password),
       emailVerifiedAt: new Date(),
     },

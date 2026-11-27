@@ -20,5 +20,6 @@ export const toAuthUser = (user: UserWithSeller): AuthUser => ({
   gender: user.gender,
   emailVerified: Boolean(user.emailVerifiedAt),
   phoneVerified: Boolean(user.phoneVerifiedAt),
+  adminPermissions: user.role === 'ADMIN' ? user.adminPermissions : [],
   createdAt: user.createdAt.toISOString(),
 });

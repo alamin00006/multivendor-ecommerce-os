@@ -54,6 +54,8 @@ export interface AuthUser {
   /** Set once the address was confirmed (OTP / email link). */
   emailVerified: boolean;
   phoneVerified: boolean;
+  /** Admin staff areas (`all` for the owner); empty for customers and sellers. */
+  adminPermissions: string[];
   createdAt: IsoDate;
 }
 
@@ -679,6 +681,34 @@ export interface AdminUserView {
   role: Role;
   isActive: boolean;
   ordersCount: number;
+  createdAt: IsoDate;
+}
+
+export interface StaffView {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  isActive: boolean;
+  /** Areas this admin can open; `['all']` for full access. */
+  permissions: string[];
+  lastActivityAt: IsoDate | null;
+  createdAt: IsoDate;
+}
+
+export interface ActivityView {
+  id: string;
+  actor: { id: string; name: string } | null;
+  method: string;
+  /** API path below the version prefix, e.g. `/admin/orders/abc/status`. */
+  path: string;
+  /** Permission area of the route (`owner` for staff/log routes). */
+  area: string;
+  /** Human summary from the route, e.g. "Category updated". */
+  summary: string | null;
+  /** Request body with secrets removed. */
+  details: unknown;
+  ip: string | null;
   createdAt: IsoDate;
 }
 
